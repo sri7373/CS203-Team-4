@@ -3,7 +3,6 @@ package com.smu.tariff.tariff;
 import com.smu.tariff.country.Country;
 import com.smu.tariff.product.ProductCategory;
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
