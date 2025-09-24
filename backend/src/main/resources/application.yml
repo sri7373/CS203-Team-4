@@ -1,0 +1,34 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/tariff}
+    username: ${DB_USERNAME:tariff}
+    password: ${DB_PASSWORD:tariff}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        jdbc:
+          lob:
+            non_contextual_creation: true
+    open-in-view: false
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+
+logging:
+  level:
+    org.hibernate.SQL: INFO
+    org.springframework.security: INFO
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:fvbMVJWfii+dPc5Ih2W6s9IC7C+fIdZgC2B/VVnEjBM=}
+    expirationMs: ${JWT_EXPIRATION_MS:86400000} # 1 day
+
+# Swagger UI path: http://localhost:8080/swagger-ui/index.html
