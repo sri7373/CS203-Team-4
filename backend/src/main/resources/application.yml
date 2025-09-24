@@ -3,9 +3,9 @@ server:
 
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/tariff}
-    username: ${DB_USERNAME:tariff}
-    password: ${DB_PASSWORD:tariff}
+    url: jdbc:postgresql://aws-csd-db.cpa8somwae85.ap-southeast-1.rds.amazonaws.com:5432/postgres
+    username: postgres
+    password: lordshiva15_SRI
   jpa:
     hibernate:
       ddl-auto: update
@@ -28,7 +28,7 @@ logging:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:fvbMVJWfii+dPc5Ih2W6s9IC7C+fIdZgC2B/VVnEjBM=}
-    expirationMs: ${JWT_EXPIRATION_MS:86400000} # 1 day
+    secret: fvbMVJWfii+dPc5Ih2W6s9IC7C+fIdZgC2B/VVnEjBM=
+    expirationMs: 86400000 # 1 day
 
 # Swagger UI path: http://localhost:8080/swagger-ui/index.html
