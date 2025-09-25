@@ -43,6 +43,44 @@ export default function CalculatePage() {
     }
   }
 
+  const downloadPdf = async () => {
+    setError(null);
+    try {
+      const payload = {
+        originCountryCode: origin,
+        destinationCountryCode: destination,
+        productCategoryCode: category,
+        declaredValue: Number(declared),
+        date: date || undefined
+      };
+  
+      const response = await fetch("http://localhost:8080/api/tariffs/calculate/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+  
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+  
+      // trigger download
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "tariff-report.pdf";
+      a.click();
+  
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PDF error:", err);
+      setError(err.message || "PDF generation failed");
+    }
+  };
+  
+
   return (
     <MotionWrapper>
   <div className="card glass glow-border neon-focus" aria-labelledby="calcTitle" style={{position:'relative', overflow:'visible'}}>
@@ -80,7 +118,9 @@ export default function CalculatePage() {
         <div className="btn-group" style={{marginTop:8}}>
           <button className="primary" type="submit" disabled={loading}>{loading ? 'Calculating…' : 'Calculate'}</button>
           <button type="button" onClick={()=>{ setRes(null); setError(null); }} disabled={loading}>Reset</button>
+          <button type="button" onClick={downloadPdf} disabled={loading}>Download PDF</button>
         </div>
+
       </form>
 
       {error && <div className="error" role="alert">{error}</div>}
