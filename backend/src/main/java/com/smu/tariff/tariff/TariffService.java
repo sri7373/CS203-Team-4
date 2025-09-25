@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -177,58 +178,58 @@ public class TariffService {
         return dto;
     }
 
-    // READ a single tariff rule by its ID
+    // READ ALL
+    public List<TariffRateDto> getAllTariffs() {
+        List<TariffRate> list = tariffRateRepository.findAll();
+        return list.stream().map(this::mapToDto).collect(Collectors.toList());
+    }
+
+    // READ ONE BY ID
     public TariffRateDto getTariffById(Long id) {
-        // Look up the tariff rule by ID
-        TariffRate tariff = tariffRateRepository.findById(id)
-                .orElseThrow(() -> new TariffNotFoundException("Tariff not found with id " + id));
-
-        // Convert entity -> DTO before returning
-        return mapToDto(tariff);
+        TariffRate rate = tariffRateRepository.findById(id)
+                .orElseThrow(() -> new TariffNotFoundException("Tariff with id " + id + " not found"));
+        return mapToDto(rate);
     }
 
-    // UPDATE an existing tariff rule
+    // UPDATE
     public TariffRateDto updateTariff(Long id, TariffRateDto dto) {
-        // Fetch the existing tariff rule
-        TariffRate existing = tariffRateRepository.findById(id)
-                .orElseThrow(() -> new TariffNotFoundException("Tariff not found with id " + id));
+        TariffRate rate = tariffRateRepository.findById(id)
+                .orElseThrow(() -> new TariffNotFoundException("Tariff with id " + id + " not found"));
 
-        // Validate and fetch related entities
-        Country origin = countryRepository.findByCode(dto.originCountryCode)
-                .orElseThrow(() -> new InvalidTariffRequestException(
-                        "Unknown origin country code: " + dto.originCountryCode));
-        Country dest = countryRepository.findByCode(dto.destinationCountryCode)
-                .orElseThrow(() -> new InvalidTariffRequestException(
-                        "Unknown destination country code: " + dto.destinationCountryCode));
-        ProductCategory cat = productCategoryRepository.findByCode(dto.productCategoryCode)
-                .orElseThrow(() -> new InvalidTariffRequestException(
-                        "Unknown product category code: " + dto.productCategoryCode));
+        if (dto.originCountryCode != null) {
+            Country origin = countryRepository.findByCode(dto.originCountryCode.toUpperCase())
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown origin country code: " + dto.originCountryCode));
+            rate.setOrigin(origin);
+        }
+        if (dto.destinationCountryCode != null) {
+            Country dest = countryRepository.findByCode(dto.destinationCountryCode.toUpperCase())
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown destination country code: " + dto.destinationCountryCode));
+            rate.setDestination(dest);
+        }
+        if (dto.productCategoryCode != null) {
+            ProductCategory cat = productCategoryRepository.findByCode(dto.productCategoryCode.toUpperCase())
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown product category code: " + dto.productCategoryCode));
+            rate.setProductCategory(cat);
+        }
+        if (dto.baseRate != null) rate.setBaseRate(dto.baseRate);
+        if (dto.additionalFee != null) rate.setAdditionalFee(dto.additionalFee);
+        if (dto.effectiveFrom != null) rate.setEffectiveFrom(dto.effectiveFrom);
+        if (dto.effectiveTo != null) rate.setEffectiveTo(dto.effectiveTo);
 
-        // Update fields with new values
-        existing.setOrigin(origin);
-        existing.setDestination(dest);
-        existing.setProductCategory(cat);
-        existing.setBaseRate(dto.baseRate);
-        existing.setAdditionalFee(dto.additionalFee);
-        existing.setEffectiveFrom(dto.effectiveFrom);
-        existing.setEffectiveTo(dto.effectiveTo);
+        tariffRateRepository.save(rate);
 
-        // Save the updated tariff back into the database
-        TariffRate updated = tariffRateRepository.save(existing);
+        logQuery("UPDATE", "id=" + id + ", " + dto.toString());
 
-        // Convert entity -> DTO before returning
-        return mapToDto(updated);
+        return mapToDto(rate);
     }
 
-    // DELETE a tariff rule
+    // DELETE
     public void deleteTariff(Long id) {
-        // Ensure tariff rule exists before deleting
         if (!tariffRateRepository.existsById(id)) {
-            throw new TariffNotFoundException("Tariff not found with id " + id);
+            throw new TariffNotFoundException("Tariff with id " + id + " not found");
         }
-
-        // Remove the tariff rule from the database
         tariffRateRepository.deleteById(id);
+        logQuery("DELETE", "id=" + id);
     }
 
     // ^CRUD satisfied
