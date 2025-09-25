@@ -26,8 +26,33 @@ public class TariffController {
 
     @GetMapping("/rates")
     public ResponseEntity<List<TariffRateDto>> search(@RequestParam(required = false) String origin,
-                                                      @RequestParam(required = false) String destination,
-                                                      @RequestParam(required = false) String category) {
+            @RequestParam(required = false) String destination,
+            @RequestParam(required = false) String category) {
         return ResponseEntity.ok(tariffService.search(origin, destination, category));
+    }
+
+    // CREATE
+    @PostMapping
+    public ResponseEntity<TariffRateDto> create(@RequestBody @Valid TariffRateDto dto) {
+        return ResponseEntity.ok(tariffService.createTariff(dto));
+    }
+
+    // READ by ID
+    @GetMapping("/{id}")
+    public ResponseEntity<TariffRateDto> getOne(@PathVariable Long id) {
+        return ResponseEntity.ok(tariffService.getTariffById(id));
+    }
+
+    // UPDATE
+    @PutMapping("/{id}")
+    public ResponseEntity<TariffRateDto> update(@PathVariable Long id, @RequestBody @Valid TariffRateDto dto) {
+        return ResponseEntity.ok(tariffService.updateTariff(id, dto));
+    }
+
+    // DELETE
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        tariffService.deleteTariff(id);
+        return ResponseEntity.noContent().build();
     }
 }

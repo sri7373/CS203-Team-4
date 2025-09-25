@@ -1,3 +1,4 @@
+
 package com.smu.tariff;
 
 import org.springframework.boot.SpringApplication;
