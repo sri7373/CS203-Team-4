@@ -3,6 +3,7 @@ package com.smu.tariff.tariff;
 import com.smu.tariff.tariff.dto.TariffCalcRequest;
 import com.smu.tariff.tariff.dto.TariffCalcResponse;
 import com.smu.tariff.tariff.dto.TariffRateDto;
+import com.smu.tariff.tariff.dto.TariffRateDtoPost;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,7 +36,7 @@ public class TariffController {
     // CREATE a new tariff rule
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<TariffRateDto> create(@RequestBody @Valid TariffRateDto dto) {
+    public ResponseEntity<TariffRateDto> create(@RequestBody @Valid TariffRateDtoPost dto) {
         return ResponseEntity.ok(tariffService.createTariff(dto));
     }
 

@@ -21,6 +21,7 @@ import com.smu.tariff.product.ProductCategoryRepository;
 import com.smu.tariff.tariff.dto.TariffCalcRequest;
 import com.smu.tariff.tariff.dto.TariffCalcResponse;
 import com.smu.tariff.tariff.dto.TariffRateDto;
+import com.smu.tariff.tariff.dto.TariffRateDtoPost;
 import com.smu.tariff.user.User;
 
 @Service
@@ -146,7 +147,7 @@ public class TariffService {
     }
 
     // CREATE a new tariff rule
-    public TariffRateDtoPost createTariff(TariffRateDtoPost dto) {
+    public TariffRateDto createTariff(TariffRateDtoPost dto) {
     Country origin = countryRepository.findByCode(dto.originCountryCode)
     .orElseThrow(() -> new InvalidTariffRequestException("Unknown origin country code: " + dto.originCountryCode));
 
