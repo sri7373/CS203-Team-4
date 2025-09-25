@@ -1,18 +1,25 @@
 package com.smu.tariff.tariff;
 
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.smu.tariff.tariff.dto.TariffCalcRequest;
 import com.smu.tariff.tariff.dto.TariffCalcResponse;
 import com.smu.tariff.tariff.dto.TariffRateDto;
+import com.smu.tariff.tariff.dto.TariffRateDtoPost;
 
-import org.springframework.http.MediaType;
 import jakarta.validation.Valid;
-
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/tariffs")
@@ -41,7 +48,7 @@ public class TariffController {
     // CREATE a new tariff rule
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<TariffRateDto> create(@RequestBody @Valid TariffRateDto dto) {
+    public ResponseEntity<TariffRateDto> create(@RequestBody @Valid TariffRateDtoPost dto) {
         return ResponseEntity.ok(tariffService.createTariff(dto));
     }
 
