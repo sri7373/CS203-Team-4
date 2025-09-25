@@ -31,25 +31,31 @@ public class TariffController {
         return ResponseEntity.ok(tariffService.search(origin, destination, category));
     }
 
-    // CREATE
+    // CREATE a new tariff rule
     @PostMapping
     public ResponseEntity<TariffRateDto> create(@RequestBody @Valid TariffRateDto dto) {
         return ResponseEntity.ok(tariffService.createTariff(dto));
     }
 
-    // READ by ID
+    // READ all tariff rules
+    @GetMapping
+    public ResponseEntity<List<TariffRateDto>> getAll() {
+        return ResponseEntity.ok(tariffService.getAllTariffs());
+    }
+
+    // READ a single tariff rule by ID
     @GetMapping("/{id}")
-    public ResponseEntity<TariffRateDto> getOne(@PathVariable Long id) {
+    public ResponseEntity<TariffRateDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(tariffService.getTariffById(id));
     }
 
-    // UPDATE
+    // UPDATE a tariff rule by ID
     @PutMapping("/{id}")
     public ResponseEntity<TariffRateDto> update(@PathVariable Long id, @RequestBody @Valid TariffRateDto dto) {
         return ResponseEntity.ok(tariffService.updateTariff(id, dto));
     }
 
-    // DELETE
+    // DELETE a tariff rule by ID
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         tariffService.deleteTariff(id);
