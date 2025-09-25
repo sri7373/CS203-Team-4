@@ -14,7 +14,7 @@ public class TariffCalcResponse {
     public BigDecimal totalCost;
     public String notes;
     public String aiSummary; //strings together the related data
-    public List<String> relatedNews;// headlines/links
+
 
     public TariffCalcResponse() { }
 }
