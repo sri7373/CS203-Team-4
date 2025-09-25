@@ -142,12 +142,12 @@ public class TariffService {
         ProductCategory cat = null;
 
         if (originCode != null && !originCode.trim().isEmpty()) {
-            origin = countryRepository.findByCode(originCode.toUpperCase())
+            origin = countryRepository.findByCode(originCode)
                     .orElseThrow(() -> new InvalidTariffRequestException("Unknown origin country code: " + originCode));
         }
 
         if (destCode != null && !destCode.trim().isEmpty()) {
-            dest = countryRepository.findByCode(destCode.toUpperCase())
+            dest = countryRepository.findByCode(destCode)
                     .orElseThrow(
                             () -> new InvalidTariffRequestException("Unknown destination country code: " + destCode));
         }
@@ -199,7 +199,7 @@ public class TariffService {
     }
 
     // CREATE a new tariff rule
-    public TariffRateDto createTariff(TariffRateDto dto) {
+    public TariffRateDtoPost createTariff(TariffRateDtoPost dto) {
     Country origin = countryRepository.findByCode(dto.originCountryCode)
     .orElseThrow(() -> new InvalidTariffRequestException("Unknown origin country code: " + dto.originCountryCode));
 

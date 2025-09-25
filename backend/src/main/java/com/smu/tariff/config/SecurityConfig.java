@@ -2,6 +2,7 @@ package com.smu.tariff.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -69,6 +70,11 @@ public class SecurityConfig {
                             "/swagger-ui/**",
                             "/swagger-ui.html"
                     ).permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/tariffs/**").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/tariffs/calculate").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/tariffs").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.PUT, "/api/tariffs/**").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.DELETE, "/api/tariffs/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             )
             .httpBasic(Customizer.withDefaults())
