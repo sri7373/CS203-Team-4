@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
-import java.io.ByteArrayOutputStream;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -192,56 +192,97 @@ public class TariffService {
         return dtos;
     }
 
-    // ... moved logging responsibility to QueryLogService
+    private void logQuery(String type, String params) {
+        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User user = (auth != null && auth.getPrincipal() instanceof User) ? (User) auth.getPrincipal() : null;
+        queryLogRepository.save(new QueryLog(user, type, params));
+    }
 
-    public byte[] generatePdfReport(TariffCalcResponse resp) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        Document document = new Document();
-        try {
-            PdfWriter.getInstance(document, out);
-            document.open();
+    // CREATE a new tariff rule
+    public TariffRateDto createTariff(TariffRateDto dto) {
+    Country origin = countryRepository.findByCode(dto.originCountryCode)
+    .orElseThrow(() -> new InvalidTariffRequestException("Unknown origin country code: " + dto.originCountryCode));
 
-            // Title
-            document.add(new Paragraph("Tariff Calculation Report", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16)));
-            document.add(new Paragraph("Generated on: " + LocalDate.now()));
-            document.add(new Paragraph(" "));
+    Country dest = countryRepository.findByCode(dto.destinationCountryCode)
+    .orElseThrow(() -> new InvalidTariffRequestException("Unknown destination country code: " + dto.destinationCountryCode));
 
-            // Input details
-            document.add(new Paragraph("Origin Country: " + resp.originCountryCode));
-            document.add(new Paragraph("Destination Country: " + resp.destinationCountryCode));
-            document.add(new Paragraph("Product Category: " + resp.productCategoryCode));
-            document.add(new Paragraph("Effective Date: " + resp.effectiveDate));
-            document.add(new Paragraph("Declared Value: " + resp.declaredValue));
-            document.add(new Paragraph(" "));
+    ProductCategory cat = productCategoryRepository.findByCode(dto.productCategoryCode)
+        .orElseThrow(() -> new RuntimeException("Category not found: " + dto.productCategoryCode));
 
-            // Calculation details in table
-            PdfPTable table = new PdfPTable(2);
-            table.setWidthPercentage(100);
 
-            table.addCell("Base Rate");
-            table.addCell(resp.baseRate.toPlainString());
+    TariffRate tariff = new TariffRate(origin, dest, cat, dto.baseRate, dto.additionalFee,
+                                       dto.effectiveFrom, dto.effectiveTo);
+    TariffRate saved = tariffRateRepository.save(tariff);
 
-            table.addCell("Tariff Amount");
-            table.addCell(resp.tariffAmount.toPlainString());
+    return mapToDto(saved);
+}
 
-            table.addCell("Additional Fee");
-            table.addCell(resp.additionalFee.toPlainString());
+    // Utility method to map entity -> DTO
+    private TariffRateDto mapToDto(TariffRate t) {
+        TariffRateDto dto = new TariffRateDto();
+        dto.id = t.getId();
+        dto.originCountryCode = t.getOrigin().getCode();
+        dto.destinationCountryCode = t.getDestination().getCode();
+        dto.productCategoryCode = t.getProductCategory().getCode();
+        dto.baseRate = t.getBaseRate();
+        dto.additionalFee = t.getAdditionalFee();
+        dto.effectiveFrom = t.getEffectiveFrom();
+        dto.effectiveTo = t.getEffectiveTo();
+        return dto;
+    }
 
-            table.addCell("Total Cost");
-            table.addCell(resp.totalCost.toPlainString());
+    // READ ALL
+    public List<TariffRateDto> getAllTariffs() {
+        List<TariffRate> list = tariffRateRepository.findAll();
+        return list.stream().map(this::mapToDto).collect(Collectors.toList());
+    }
 
-            document.add(table);
+    // READ ONE BY ID
+    public TariffRateDto getTariffById(Long id) {
+        TariffRate rate = tariffRateRepository.findById(id)
+                .orElseThrow(() -> new TariffNotFoundException("Tariff with id " + id + " not found"));
+        return mapToDto(rate);
+    }
 
-            // Notes
-            document.add(new Paragraph(" "));
-            document.add(new Paragraph("Notes: " + resp.notes));
+    // UPDATE
+    public TariffRateDto updateTariff(Long id, TariffRateDto dto) {
+        TariffRate rate = tariffRateRepository.findById(id)
+                .orElseThrow(() -> new TariffNotFoundException("Tariff with id " + id + " not found"));
 
-            document.close();
-        } catch (Exception e) {
-            throw new RuntimeException("Error generating PDF", e);
+        if (dto.originCountryCode != null) {
+            Country origin = countryRepository.findByCode(dto.originCountryCode.toUpperCase())
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown origin country code: " + dto.originCountryCode));
+            rate.setOrigin(origin);
         }
+        if (dto.destinationCountryCode != null) {
+            Country dest = countryRepository.findByCode(dto.destinationCountryCode.toUpperCase())
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown destination country code: " + dto.destinationCountryCode));
+            rate.setDestination(dest);
+        }
+        if (dto.productCategoryCode != null) {
+            ProductCategory cat = productCategoryRepository.findByCode(dto.productCategoryCode.toUpperCase())
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown product category code: " + dto.productCategoryCode));
+            rate.setProductCategory(cat);
+        }
+        if (dto.baseRate != null) rate.setBaseRate(dto.baseRate);
+        if (dto.additionalFee != null) rate.setAdditionalFee(dto.additionalFee);
+        if (dto.effectiveFrom != null) rate.setEffectiveFrom(dto.effectiveFrom);
+        if (dto.effectiveTo != null) rate.setEffectiveTo(dto.effectiveTo);
 
-        return out.toByteArray();
+        tariffRateRepository.save(rate);
+
+        logQuery("UPDATE", "id=" + id + ", " + dto.toString());
+
+        return mapToDto(rate);
+    }
+
+    // DELETE
+    public void deleteTariff(Long id) {
+        if (!tariffRateRepository.existsById(id)) {
+            throw new TariffNotFoundException("Tariff with id " + id + " not found");
+        }
+        tariffRateRepository.deleteById(id);
+        logQuery("DELETE", "id=" + id);
     }
 }
 
