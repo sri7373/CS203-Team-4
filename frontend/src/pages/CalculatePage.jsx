@@ -92,44 +92,6 @@ export default function CalculatePage() {
     }
   };
 
-  const downloadPdf = async () => {
-    setError(null);
-    try {
-      const payload = {
-        originCountryCode: origin,
-        destinationCountryCode: destination,
-        productCategoryCode: category,
-        declaredValue: Number(declared),
-        date: date || undefined
-      };
-  
-      const response = await fetch("http://localhost:8080/api/tariffs/calculate/pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-  
-      if (!response.ok) {
-        throw new Error("Failed to generate PDF");
-      }
-  
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-  
-      // trigger download
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "tariff-report.pdf";
-      a.click();
-  
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("PDF error:", err);
-      setError(err.message || "PDF generation failed");
-    }
-  };
-  
-
   return (
     <MotionWrapper>
       <div
@@ -227,7 +189,6 @@ export default function CalculatePage() {
           <div className="error" role="alert">
             {error}
           </div>
-
         )}
 
         {loading && (
@@ -244,57 +205,6 @@ export default function CalculatePage() {
           >
             <div className="spinner" aria-hidden="true" />
             <span className="small">Running tariff computation…</span>
-        </div>
-        <div className="btn-group" style={{marginTop:8}}>
-          <button className="primary" type="submit" disabled={loading}>{loading ? 'Calculating…' : 'Calculate'}</button>
-          <button type="button" onClick={()=>{ setRes(null); setError(null); }} disabled={loading}>Reset</button>
-        </div>
-
-      </form>
-
-      {error && <div className="error" role="alert">{error}</div>}
-
-      {loading && (
-        <motion.div style={{marginTop:24, display:'flex', alignItems:'center', gap:12}} aria-live="polite"
-          initial={{ opacity:0 }} animate={{ opacity:1 }}>
-          <div className="spinner" aria-hidden="true" />
-          <span className="small">Running tariff computation…</span>
-        </motion.div>
-      )}
-
-      <AnimatePresence mode="wait">
-        {res && !loading && (
-          <motion.div style={{marginTop:32}} aria-live="polite"
-            key={res.id || JSON.stringify(res)}
-            initial={{ opacity:0, y:12 }}
-            animate={{ opacity:1, y:0 }}
-            exit={{ opacity:0, y:-8 }}
-            transition={{ duration:.4, ease:[0.4,0.0,0.2,1] }}
-          >
-            <h3 className="neon-subtle" style={{fontWeight:600, marginBottom:12}}>Result Breakdown</h3>
-            <div className="result-panel glow-border">
-              <motion.table aria-label="Tariff calculation breakdown" className="table-glow smart-table"
-                initial={{ opacity:0 }}
-                animate={{ opacity:1 }}
-                transition={{ delay:.1 }}>
-                <tbody>
-                  <tr><th>Origin</th><td>{res.originCountryCode}</td></tr>
-                  <tr><th>Destination</th><td>{res.destinationCountryCode}</td></tr>
-                  <tr><th>Category</th><td>{res.productCategoryCode}</td></tr>
-                  <tr><th>Effective Date</th><td>{res.effectiveDate}</td></tr>
-                  <tr><th>Declared Value</th><td>{formatCurrency(res.declaredValue)}</td></tr>
-                  <tr><th>Base Rate</th><td>{res.baseRate}</td></tr>
-                  <tr><th>Tariff Amount</th><td>{formatCurrency(res.tariffAmount)}</td></tr>
-                  <tr><th>Additional Fee</th><td>{formatCurrency(res.additionalFee)}</td></tr>
-                  <tr className="total-row"><th>Total Cost</th><td><b>{formatCurrency(res.totalCost)}</b></td></tr>
-                </tbody>
-              </motion.table>
-              <div className="panel-foot small">Total = declaredValue + (declaredValue * baseRate) + additionalFee</div>
-            </div>
-            {res.notes && <div className="small" style={{marginTop:12}}>{res.notes}</div>}
-            <div style={{ marginTop: 16 }}>
-        <button className="primary" type="button" onClick={downloadPdf}> Download PDF</button>
-            </div>
           </motion.div>
         )}
 
@@ -511,38 +421,6 @@ export default function CalculatePage() {
                   Download PDF
                 </button>
               </div>
-
-              {/* Total Cost - Prominent Display */}
-              <motion.div
-                className="result-panel glow-border"
-                style={{ textAlign: "center", padding: "20px" }}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 }}
-              >
-                <div
-                  className="label"
-                  style={{ marginBottom: 8, fontSize: "14px" }}
-                >
-                  TOTAL COST
-                </div>
-                <div
-                  style={{
-                    fontSize: "32px",
-                    fontWeight: 700,
-                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                    backgroundClip: "text",
-                    WebkitBackgroundClip: "text",
-                    color: "transparent",
-                  }}
-                >
-                  {formatCurrency(res.totalCost)}
-                </div>
-                <div className="small" style={{ marginTop: 8, opacity: 0.7 }}>
-                  Total = declaredValue + (declaredValue × baseRate) +
-                  additionalFee
-                </div>
-              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
