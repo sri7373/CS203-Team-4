@@ -73,17 +73,20 @@ public class TariffService {
         
         // Fetch entities, throw error if not found
         Country origin = countryRepository.findByCode(req.originCountryCode.toUpperCase())
-                .orElseThrow(() -> new InvalidTariffRequestException("Unknown origin country code: " + req.originCountryCode));
+                .orElseThrow(() -> new InvalidTariffRequestException(
+                        "Unknown origin country code: " + req.originCountryCode));
         Country dest = countryRepository.findByCode(req.destinationCountryCode.toUpperCase())
-                .orElseThrow(() -> new InvalidTariffRequestException("Unknown destination country code: " + req.destinationCountryCode));
+                .orElseThrow(() -> new InvalidTariffRequestException(
+                        "Unknown destination country code: " + req.destinationCountryCode));
         ProductCategory cat = productCategoryRepository.findByCode(req.productCategoryCode.toUpperCase())
-                .orElseThrow(() -> new InvalidTariffRequestException("Unknown product category code: " + req.productCategoryCode));
+                .orElseThrow(() -> new InvalidTariffRequestException(
+                        "Unknown product category code: " + req.productCategoryCode));
 
         List<TariffRate> rates = tariffRateRepository.findApplicableRates(origin, dest, cat, date);
         if (rates.isEmpty()) {
             throw new TariffNotFoundException(
-                String.format("No applicable tariff rate found for route %s -> %s, category %s on %s", 
-                    req.originCountryCode, req.destinationCountryCode, req.productCategoryCode, date));
+                    "No applicable tariff rate found for route %s -> %s, category %s on %s".formatted(
+                            req.originCountryCode, req.destinationCountryCode, req.productCategoryCode, date));
         }
         TariffRate rate = rates.get(0); // latest effective rate
 
@@ -137,20 +140,21 @@ public class TariffService {
         Country origin = null;
         Country dest = null;
         ProductCategory cat = null;
-        
+
         if (originCode != null && !originCode.trim().isEmpty()) {
             origin = countryRepository.findByCode(originCode.toUpperCase())
-                .orElseThrow(() -> new InvalidTariffRequestException("Unknown origin country code: " + originCode));
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown origin country code: " + originCode));
         }
-        
+
         if (destCode != null && !destCode.trim().isEmpty()) {
             dest = countryRepository.findByCode(destCode.toUpperCase())
-                .orElseThrow(() -> new InvalidTariffRequestException("Unknown destination country code: " + destCode));
+                    .orElseThrow(
+                            () -> new InvalidTariffRequestException("Unknown destination country code: " + destCode));
         }
-        
+
         if (catCode != null && !catCode.trim().isEmpty()) {
             cat = productCategoryRepository.findByCode(catCode.toUpperCase())
-                .orElseThrow(() -> new InvalidTariffRequestException("Unknown product category code: " + catCode));
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown product category code: " + catCode));
         }
 
         List<TariffRate> list = tariffRateRepository.search(origin, dest, cat);

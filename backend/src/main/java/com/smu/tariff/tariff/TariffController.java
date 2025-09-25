@@ -32,8 +32,8 @@ public class TariffController {
     //To fetch tariff rates based on search criteria
     @GetMapping("/rates")
     public ResponseEntity<List<TariffRateDto>> search(@RequestParam(required = false) String origin,
-                                                      @RequestParam(required = false) String destination,
-                                                      @RequestParam(required = false) String category) {
+            @RequestParam(required = false) String destination,
+            @RequestParam(required = false) String category) {
         return ResponseEntity.ok(tariffService.search(origin, destination, category));
     }
 
