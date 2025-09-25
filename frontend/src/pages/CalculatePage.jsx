@@ -118,7 +118,6 @@ export default function CalculatePage() {
         <div className="btn-group" style={{marginTop:8}}>
           <button className="primary" type="submit" disabled={loading}>{loading ? 'Calculating…' : 'Calculate'}</button>
           <button type="button" onClick={()=>{ setRes(null); setError(null); }} disabled={loading}>Reset</button>
-          <button type="button" onClick={downloadPdf} disabled={loading}>Download PDF</button>
         </div>
 
       </form>
@@ -163,6 +162,9 @@ export default function CalculatePage() {
               <div className="panel-foot small">Total = declaredValue + (declaredValue * baseRate) + additionalFee</div>
             </div>
             {res.notes && <div className="small" style={{marginTop:12}}>{res.notes}</div>}
+            <div style={{ marginTop: 16 }}>
+        <button className="primary" type="button" onClick={downloadPdf}> Download PDF</button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
