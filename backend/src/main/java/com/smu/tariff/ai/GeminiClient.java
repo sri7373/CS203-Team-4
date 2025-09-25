@@ -46,13 +46,10 @@ public class GeminiClient {
             JsonNode root = mapper.readTree(response.getBody());
 
             // Drill down: candidates[0].content.parts[0].text
-            return root.path("candidates")
-                       .get(0)
+            return root.path("candidates").get(0)
                        .path("content")
-                       .path("parts")
-                       .get(0)
-                       .path("text")
-                       .asText();
+                       .path("parts").get(0)
+                       .path("text").asText();
         } catch (Exception e) {
             e.printStackTrace();
             return "AI summary generation failed";

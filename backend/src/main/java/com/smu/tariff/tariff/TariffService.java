@@ -101,23 +101,31 @@ public class TariffService {
         logQuery("CALCULATE", String.format("{origin:%s,dest:%s,cat:%s,val:%s,date:%s}",
                 resp.originCountryCode, resp.destinationCountryCode, resp.productCategoryCode, declared, date));
 
-        // ai documentations
         String prompt = String.format(
-        "Summarize this tariff calculation clearly in business terms. " +
-        "Also include recent global news or trade policy context related to %s tariffs between %s and %s.\n\n" +
-        "Calculation:\n" +
-        "Declared Value: %s\nTariff: %s\nFee: %s\nTotal: %s\n",
-        resp.productCategoryCode,
-        resp.originCountryCode,
-        resp.destinationCountryCode,
-        resp.declaredValue, resp.tariffAmount, resp.additionalFee, resp.totalCost
+             "Summarize this tariff calculation clearly in business terms. " +
+            "Format the response as valid HTML using <p> for paragraphs and <b> for important values or keywords. " +
+            "Also include recent global news or trade policy context related to <b>%s tariffs</b> between <b>%s</b> and <b>%s</b>.\n\n" +
+            "<p><b>Calculation:</b></p>" +
+             "<ul>" +
+            "<li>Declared Value: %s</li>" +
+            "<li>Tariff: %s</li>" +
+            "<li>Fee: %s</li>" +
+            "<li>Total: %s</li>" +
+            "</ul>",
+            resp.productCategoryCode,
+            resp.originCountryCode,
+            resp.destinationCountryCode,
+            resp.declaredValue, resp.tariffAmount, resp.additionalFee, resp.totalCost
         );
+                
+                
+                
 
 
         try {
             GeminiClient gemini = new GeminiClient(System.getenv("GEMINI_API_KEY"));
-            String aiRaw = gemini.generateSummary(prompt);
-            resp.aiSummary = aiRaw; // For now you’ll see the full JSON response
+            String aiText = gemini.generateSummary(prompt);  // already parsed text
+            resp.aiSummary = aiText;
         } catch (Exception e) {
             e.printStackTrace();
             resp.aiSummary = "AI summary unavailable.";

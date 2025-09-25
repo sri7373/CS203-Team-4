@@ -384,15 +384,20 @@ export default function CalculatePage() {
                 </motion.div>
               </div>
 
-      <motion.div
-        className="small neon-subtle"
-        style={{ marginTop: -12, marginBottom: 24 }}
-        initial={{ opacity:0, y:10 }}
-        animate={{ opacity:1, y:0 }}
-        transition={{ duration:.4 }}>
-        <div className="field" style={{ flex: "1 1 260px" }}>AI Summary</div>
-        <p style={{margin:0}}>{res.aiSummary}</p>
-      </motion.div>
+              <motion.div
+  className="small neon-subtle"
+  style={{ marginTop: -12, marginBottom: 24 }}
+  initial={{ opacity:0, y:10 }}
+  animate={{ opacity:1, y:0 }}
+  transition={{ duration:.4 }}
+>
+  <div className="field" style={{ flex: "1 1 260px" }}>AI Summary</div>
+  <div 
+    style={{ margin:0 }}
+    dangerouslySetInnerHTML={{ __html: res.aiSummary }}
+  />
+</motion.div>
+
 
               {/* Total Cost - Prominent Display */}
               <motion.div
