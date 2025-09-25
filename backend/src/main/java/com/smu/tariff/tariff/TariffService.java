@@ -22,6 +22,8 @@ import com.smu.tariff.tariff.dto.TariffCalcRequest;
 import com.smu.tariff.tariff.dto.TariffCalcResponse;
 import com.smu.tariff.tariff.dto.TariffRateDto;
 import com.smu.tariff.user.User;
+import com.smu.tariff.user.UserRepository;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -34,15 +36,18 @@ public class TariffService {
     private final CountryRepository countryRepository;
     private final ProductCategoryRepository productCategoryRepository;
     private final QueryLogRepository queryLogRepository;
+    private final UserRepository userRepository;
 
     public TariffService(TariffRateRepository tariffRateRepository,
                          CountryRepository countryRepository,
                          ProductCategoryRepository productCategoryRepository,
-                         QueryLogRepository queryLogRepository) {
+                         QueryLogRepository queryLogRepository,
+                         UserRepository userRepository) {
         this.tariffRateRepository = tariffRateRepository;
         this.countryRepository = countryRepository;
         this.productCategoryRepository = productCategoryRepository;
         this.queryLogRepository = queryLogRepository;
+        this.userRepository = userRepository;
     }
 
     public TariffCalcResponse calculate(TariffCalcRequest req) {
@@ -78,9 +83,25 @@ public class TariffService {
         }
         TariffRate rate = rates.get(0); // latest effective rate
 
+        // If the selected rate has zero baseRate and zero additionalFee, try to find a fallback
+        if ((rate.getBaseRate() == null || rate.getBaseRate().compareTo(java.math.BigDecimal.ZERO) == 0)
+                && (rate.getAdditionalFee() == null || rate.getAdditionalFee().compareTo(java.math.BigDecimal.ZERO) == 0)) {
+            // Attempt to find a recent non-zero rate for the same category
+            java.util.Optional<TariffRate> fallback = tariffRateRepository.findFirstByProductCategoryAndBaseRateGreaterThanOrderByEffectiveFromDesc(cat, java.math.BigDecimal.ZERO);
+            if (fallback.isPresent()) {
+                rate = fallback.get();
+            }
+        }
+
         BigDecimal declared = BigDecimal.valueOf(req.declaredValue).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal tariffAmount = declared.multiply(rate.getBaseRate()).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal total = declared.add(tariffAmount).add(rate.getAdditionalFee()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal baseRate = (rate.getBaseRate() == null) ? BigDecimal.ZERO : rate.getBaseRate();
+        BigDecimal additionalFee = (rate.getAdditionalFee() == null) ? BigDecimal.ZERO : rate.getAdditionalFee();
+
+        // Compute tariff as: declared + (declared * baseRate) + additionalFee
+        BigDecimal tariffAmount = declared.multiply(baseRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal total = declared.add(tariffAmount).add(additionalFee).setScale(2, RoundingMode.HALF_UP);
+
+        System.out.println("TariffService: selected rate id=" + rate.getId() + " baseRate=" + baseRate + " additionalFee=" + additionalFee);
 
         // Prepare response
         TariffCalcResponse resp = new TariffCalcResponse();
@@ -143,7 +164,18 @@ public class TariffService {
 
     private void logQuery(String type, String params) {
         org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User user = (auth != null && auth.getPrincipal() instanceof User) ? (User) auth.getPrincipal() : null;
+        User user = null;
+        if (auth != null) {
+            Object principal = auth.getPrincipal();
+            if (principal instanceof User) {
+                user = (User) principal;
+            } else if (principal instanceof UserDetails) {
+                String username = ((UserDetails) principal).getUsername();
+                user = userRepository.findByUsername(username).orElse(null);
+            }
+        }
+
+        System.out.println("logQuery: saving log for user=" + (user != null ? user.getUsername() + "(" + user.getRole() + ")" : "<anonymous>"));
         queryLogRepository.save(new QueryLog(user, type, params));
     }
 

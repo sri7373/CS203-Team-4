@@ -32,4 +32,25 @@ public class QueryLog {
         this.type = type;
         this.params = params;
     }
+
+    // Getters used by controllers and serializers
+    public Long getId() {
+        return id;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public String getParams() {
+        return params;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
 }
