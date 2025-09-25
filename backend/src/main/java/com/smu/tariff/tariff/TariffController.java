@@ -37,20 +37,34 @@ public class TariffController {
         return ResponseEntity.ok(tariffService.search(origin, destination, category));
     }
 
-    //To generate PDF
-    @CrossOrigin(origins = "http://localhost:3000")
-    @PostMapping(value = "/calculate/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<byte[]> calculatePdf(@Valid @RequestBody TariffCalcRequest req) {
-        //Calculate tariff
-        TariffCalcResponse resp = tariffService.calculate(req);
+    // CREATE a new tariff rule
+    @PostMapping
+    public ResponseEntity<TariffRateDto> create(@RequestBody @Valid TariffRateDto dto) {
+        return ResponseEntity.ok(tariffService.createTariff(dto));
+    }
 
-        //Generate PDF
-        byte[] pdfBytes = tariffService.generatePdfReport(resp);
+    // READ all tariff rules
+    @GetMapping
+    public ResponseEntity<List<TariffRateDto>> getAll() {
+        return ResponseEntity.ok(tariffService.getAllTariffs());
+    }
 
-        //Return PDF as response
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=tariff-report.pdf")
-                .contentType(MediaType.valueOf(MediaType.APPLICATION_PDF_VALUE))
-                .body(pdfBytes);
+    // READ a single tariff rule by ID
+    @GetMapping("/{id}")
+    public ResponseEntity<TariffRateDto> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(tariffService.getTariffById(id));
+    }
+
+    // UPDATE a tariff rule by ID
+    @PutMapping("/{id}")
+    public ResponseEntity<TariffRateDto> update(@PathVariable Long id, @RequestBody @Valid TariffRateDto dto) {
+        return ResponseEntity.ok(tariffService.updateTariff(id, dto));
+    }
+
+    // DELETE a tariff rule by ID
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        tariffService.deleteTariff(id);
+        return ResponseEntity.noContent().build();
     }
 }
