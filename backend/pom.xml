@@ -12,9 +12,9 @@
     </parent>
 
     <groupId>com.smu</groupId>
-    <artifactId>tariff-backend</artifactId>
+    <artifactId>backend</artifactId>
     <version>0.1.0</version>
-    <name>tariff-backend</name>
+    <name>backend</name>
     <description>TARIFF (Trade Agreements Regulating Imports and Foreign Fees) backend</description>
 
     <properties>
