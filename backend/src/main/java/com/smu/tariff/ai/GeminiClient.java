@@ -55,7 +55,7 @@ public class GeminiClient {
                        .asText();
         } catch (Exception e) {
             e.printStackTrace();
-            return "AI summary could not be parsed.";
+            return "AI summary generation failed";
         }
     }
 }

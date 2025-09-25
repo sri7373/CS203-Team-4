@@ -103,17 +103,23 @@ public class TariffService {
 
         // ai documentations
         String prompt = String.format(
-            "Summarize this tariff calculation clearly in business terms:\n" +
-            "Origin: %s\nDestination: %s\nProduct: %s\nDeclared Value: %s\nTariff: %s\nFee: %s\nTotal: %s",
-            resp.originCountryCode, resp.destinationCountryCode, resp.productCategoryCode,
-            resp.declaredValue, resp.tariffAmount, resp.additionalFee, resp.totalCost
+        "Summarize this tariff calculation clearly in business terms. " +
+        "Also include recent global news or trade policy context related to %s tariffs between %s and %s.\n\n" +
+        "Calculation:\n" +
+        "Declared Value: %s\nTariff: %s\nFee: %s\nTotal: %s\n",
+        resp.productCategoryCode,
+        resp.originCountryCode,
+        resp.destinationCountryCode,
+        resp.declaredValue, resp.tariffAmount, resp.additionalFee, resp.totalCost
         );
+
 
         try {
             GeminiClient gemini = new GeminiClient(System.getenv("GEMINI_API_KEY"));
             String aiRaw = gemini.generateSummary(prompt);
             resp.aiSummary = aiRaw; // For now you’ll see the full JSON response
         } catch (Exception e) {
+            e.printStackTrace();
             resp.aiSummary = "AI summary unavailable.";
         }
 // resp.aiSummary = "AI summary unavailable."; // Temporarily disable AI feature
