@@ -9,7 +9,8 @@ const COUNTRIES = ['SGP','USA','CHN','MYS','IDN']
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
-  maximumFractionDigits: 0
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
 })
 
 const percentFormatter = new Intl.NumberFormat('en-US', {
@@ -25,7 +26,9 @@ const formatCurrency = (value) => {
 
 const formatPercent = (value) => {
   if (value === null || value === undefined) return 'N/A'
-  return percentFormatter.format(Number(value))
+  // If value is already a percentage (like 5.25), divide by 100
+  const percentValue = Number(value) > 1 ? Number(value) / 100 : Number(value)
+  return percentFormatter.format(percentValue)
 }
 
 export default function InsightsPage() {
@@ -69,8 +72,8 @@ export default function InsightsPage() {
   const renderProductList = (items = []) => {
     if (!items.length) return (
       <div className="small" style={{marginTop:8, padding:12, textAlign:'center', opacity:0.7}}>
-        <p>No trade data available in database.</p>
-        <p className="tiny">Data may need to be imported from external trade statistics.</p>
+        <p>No tariff data available in database.</p>
+        <p className="tiny">Check if tariff rates exist for this country's trade routes.</p>
       </div>
     )
     return (
@@ -80,12 +83,23 @@ export default function InsightsPage() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}>
-            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-              <div>
-                <span style={{fontSize:'16px', fontWeight:600, color:'var(--color-text)'}}>{item.name}</span>
-                <span className="badge subtle" style={{marginLeft:8, fontSize:'12px'}}>{item.code}</span>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
+              <div style={{flex: 1}}>
+                <div style={{display:'flex', alignItems:'center', marginBottom:8}}>
+                  <span style={{fontSize:'16px', fontWeight:600, color:'var(--color-text)'}}>{item.name}</span>
+                  <span className="badge subtle" style={{marginLeft:8, fontSize:'12px'}}>{item.code}</span>
+                </div>
+                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, fontSize:'14px'}}>
+                  <div>
+                    <span className="label" style={{fontSize:'12px', opacity:0.7}}>Base Rate</span>
+                    <div style={{fontWeight:600, color:'var(--color-text)'}}>{formatPercent(item.baseRate)}</div>
+                  </div>
+                  <div>
+                    <span className="label" style={{fontSize:'12px', opacity:0.7}}>Additional Fee</span>
+                    <div style={{fontWeight:600, color:'var(--color-text)'}}>{formatCurrency(item.additionalFee)}</div>
+                  </div>
+                </div>
               </div>
-              <span className="label" style={{fontSize:'14px', fontWeight:600}}>{formatCurrency(item.totalValue)}</span>
             </div>
           </motion.div>
         ))}
@@ -96,8 +110,8 @@ export default function InsightsPage() {
   const renderPartnerList = (items = []) => {
     if (!items.length) return (
       <div className="small" style={{marginTop:8, padding:12, textAlign:'center', opacity:0.7}}>
-        <p>No trading partner data available in database.</p>
-        <p className="tiny">Data may need to be imported from external trade statistics.</p>
+        <p>No trading partner tariff data available.</p>
+        <p className="tiny">Check if tariff relationships exist for this country.</p>
       </div>
     )
     return (
@@ -112,7 +126,10 @@ export default function InsightsPage() {
                 <span style={{fontSize:'16px', fontWeight:600, color:'var(--color-text)'}}>{item.name}</span>
                 <span className="badge subtle" style={{marginLeft:8, fontSize:'12px'}}>{item.code}</span>
               </div>
-              <span className="label" style={{fontSize:'14px', fontWeight:600}}>{formatCurrency(item.totalValue)}</span>
+              <div style={{textAlign:'right'}}>
+                <div className="label" style={{fontSize:'12px', opacity:0.7}}>Avg Tariff Rate</div>
+                <span style={{fontSize:'14px', fontWeight:600}}>{formatPercent(item.totalValue)}</span>
+              </div>
             </div>
           </motion.div>
         ))}
@@ -129,7 +146,7 @@ export default function InsightsPage() {
           transition={{ duration:.6, ease:[0.4,0,0.2,1] }}
         >Trade Insights</motion.h2>
         <p className="small neon-subtle" style={{marginTop:-12, marginBottom:24}}>
-          Explore headline trade metrics by reporting market, including leading products, tariff intensity and partner exposure.
+          View tariff rates and fees by product category, including base percentage rates and additional fixed charges.
         </p>
 
         <div className="inline-fields field-cluster" style={{marginBottom:16}}>
@@ -163,7 +180,7 @@ export default function InsightsPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}>
-                <h4 id="importsHeading" className="label" style={{marginBottom:12, fontSize:'14px', fontWeight:600}}>Top Imports</h4>
+                <h4 id="importsHeading" className="label" style={{marginBottom:12, fontSize:'14px', fontWeight:600}}>Top Import Categories by Tariff Rate</h4>
                 {renderProductList(insights.topImports)}
               </motion.section>
               
@@ -171,7 +188,7 @@ export default function InsightsPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}>
-                <h4 id="exportsHeading" className="label" style={{marginBottom:12, fontSize:'14px', fontWeight:600}}>Top Exports</h4>
+                <h4 id="exportsHeading" className="label" style={{marginBottom:12, fontSize:'14px', fontWeight:600}}>Top Export Categories by Tariff Rate</h4>
                 {renderProductList(insights.topExports)}
               </motion.section>
             </div>
@@ -204,7 +221,7 @@ export default function InsightsPage() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}>
-              <h4 id="partnersHeading" className="label" style={{marginBottom:12, fontSize:'14px', fontWeight:600}}>Major Trade Partners</h4>
+              <h4 id="partnersHeading" className="label" style={{marginBottom:12, fontSize:'14px', fontWeight:600}}>Major Trade Partners by Average Tariff Rate</h4>
               {renderPartnerList(insights.majorPartners)}
             </motion.section>
           </motion.div>
