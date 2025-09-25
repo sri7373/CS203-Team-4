@@ -102,27 +102,67 @@ export default function CalculatePage() {
             exit={{ opacity:0, y:-8 }}
             transition={{ duration:.4, ease:[0.4,0.0,0.2,1] }}
           >
-            <h3 className="neon-subtle" style={{fontWeight:600, marginBottom:12}}>Result Breakdown</h3>
-            <div className="result-panel glow-border">
-              <motion.table aria-label="Tariff calculation breakdown" className="table-glow smart-table"
-                initial={{ opacity:0 }}
-                animate={{ opacity:1 }}
-                transition={{ delay:.1 }}>
-                <tbody>
-                  <tr><th>Origin</th><td>{res.originCountryCode}</td></tr>
-                  <tr><th>Destination</th><td>{res.destinationCountryCode}</td></tr>
-                  <tr><th>Category</th><td>{res.productCategoryCode}</td></tr>
-                  <tr><th>Effective Date</th><td>{res.effectiveDate}</td></tr>
-                  <tr><th>Declared Value</th><td>{formatCurrency(res.declaredValue)}</td></tr>
-                  <tr><th>Base Rate</th><td>{res.baseRate}</td></tr>
-                  <tr><th>Tariff Amount</th><td>{formatCurrency(res.tariffAmount)}</td></tr>
-                  <tr><th>Additional Fee</th><td>{formatCurrency(res.additionalFee)}</td></tr>
-                  <tr className="total-row"><th>Total Cost</th><td><b>{formatCurrency(res.totalCost)}</b></td></tr>
-                </tbody>
-              </motion.table>
-              <div className="panel-foot small">Total = declaredValue + (declaredValue * baseRate) + additionalFee</div>
+            <h3 className="neon-subtle" style={{fontWeight:600, marginBottom:16}}>Result Breakdown</h3>
+            
+            {/* Trade Route Info Cards */}
+            <div style={{display:'grid', gap:16, gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', marginBottom:24}}>
+              <motion.div className="metric-card" 
+                initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:.1 }}>
+                <span className="label">Origin</span>
+                <span style={{fontSize:'16px', fontWeight:600, color:'var(--color-text)'}}>{res.originCountryCode}</span>
+              </motion.div>
+              <motion.div className="metric-card"
+                initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:.15 }}>
+                <span className="label">Destination</span>
+                <span style={{fontSize:'16px', fontWeight:600, color:'var(--color-text)'}}>{res.destinationCountryCode}</span>
+              </motion.div>
+              <motion.div className="metric-card"
+                initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:.2 }}>
+                <span className="label">Category</span>
+                <span style={{fontSize:'16px', fontWeight:600, color:'var(--color-text)'}}>{res.productCategoryCode}</span>
+              </motion.div>
+              <motion.div className="metric-card"
+                initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:.25 }}>
+                <span className="label">Effective Date</span>
+                <span style={{fontSize:'16px', fontWeight:600, color:'var(--color-text)'}}>{res.effectiveDate}</span>
+              </motion.div>
             </div>
-            {res.notes && <div className="small" style={{marginTop:12}}>{res.notes}</div>}
+
+            {/* Financial Breakdown Cards */}
+            <div style={{display:'grid', gap:16, gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', marginBottom:20}}>
+              <motion.div className="metric-card"
+                initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:.3 }}>
+                <span className="label">Declared Value</span>
+                <span style={{fontSize:'18px', fontWeight:600, color:'var(--color-text)'}}>{formatCurrency(res.declaredValue)}</span>
+              </motion.div>
+              <motion.div className="metric-card"
+                initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:.35 }}>
+                <span className="label">Base Rate</span>
+                <span style={{fontSize:'18px', fontWeight:600, color:'var(--color-text)'}}>{(res.baseRate * 100).toFixed(2)}%</span>
+              </motion.div>
+              <motion.div className="metric-card"
+                initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:.4 }}>
+                <span className="label">Tariff Amount</span>
+                <span style={{fontSize:'18px', fontWeight:600, color:'var(--color-text)'}}>{formatCurrency(res.tariffAmount)}</span>
+              </motion.div>
+              <motion.div className="metric-card"
+                initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:.45 }}>
+                <span className="label">Additional Fee</span>
+                <span style={{fontSize:'18px', fontWeight:600, color:'var(--color-text)'}}>{formatCurrency(res.additionalFee)}</span>
+              </motion.div>
+            </div>
+
+            {/* Total Cost - Prominent Display */}
+            <motion.div className="result-panel glow-border" style={{textAlign:'center', padding:'20px'}}
+              initial={{ opacity:0, scale:0.95 }} animate={{ opacity:1, scale:1 }} transition={{ delay:.5 }}>
+              <div className="label" style={{marginBottom:8, fontSize:'14px'}}>TOTAL COST</div>
+              <div style={{fontSize:'32px', fontWeight:700, background:'linear-gradient(135deg, #6366f1, #8b5cf6)', backgroundClip:'text', WebkitBackgroundClip:'text', color:'transparent'}}>
+                {formatCurrency(res.totalCost)}
+              </div>
+              <div className="small" style={{marginTop:8, opacity:0.7}}>
+                Total = declaredValue + (declaredValue × baseRate) + additionalFee
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

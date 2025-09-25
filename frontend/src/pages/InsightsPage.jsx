@@ -1,15 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import MotionWrapper from '../components/MotionWrapper.jsx'
+import Select from '../components/Select.jsx'
 import api from '../services/api.js'
 
-const COUNTRY_OPTIONS = [
-  { value: 'SGP', label: 'Singapore' },
-  { value: 'USA', label: 'United States' },
-  { value: 'CHN', label: 'China' },
-  { value: 'MYS', label: 'Malaysia' },
-  { value: 'IDN', label: 'Indonesia' }
-]
+const COUNTRIES = ['SGP','USA','CHN','MYS','IDN']
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -49,13 +44,16 @@ export default function InsightsPage() {
       setLoading(true)
       setError(null)
       try {
+        console.log(`Loading trade insights from AWS PostgreSQL database for: ${country}`)
         const response = await api.get('/api/trade/insights', { params: { country } })
         if (!cancelled) {
+          console.log('Trade insights loaded successfully:', response.data)
           setInsights(response.data)
         }
       } catch (err) {
         if (!cancelled) {
-          const msg = err?.formattedMessage || err?.message || 'Unable to load trade insights'
+          console.error('Failed to load trade insights:', err)
+          const msg = err?.response?.data?.message || err?.formattedMessage || err?.message || 'Unable to load trade insights from database'
           setError(msg)
           setInsights(null)
         }
@@ -69,34 +67,56 @@ export default function InsightsPage() {
   }, [country])
 
   const renderProductList = (items = []) => {
-    if (!items.length) return <p className="small" style={{marginTop:8}}>No product data available.</p>
+    if (!items.length) return (
+      <div className="small" style={{marginTop:8, padding:12, textAlign:'center', opacity:0.7}}>
+        <p>No trade data available in database.</p>
+        <p className="tiny">Data may need to be imported from external trade statistics.</p>
+      </div>
+    )
     return (
-      <ol className="metric-list">
-        {items.map(item => (
-          <li key={item.code}>
-            <div className="metric-item">
-              <span><strong>{item.name}</strong> <span className="badge subtle">{item.code}</span></span>
-              <span className="metric-value">{formatCurrency(item.totalValue)}</span>
+      <div style={{display:'grid', gap:12}}>
+        {items.map((item, index) => (
+          <motion.div key={item.code} className="metric-card"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+              <div>
+                <span style={{fontSize:'16px', fontWeight:600, color:'var(--color-text)'}}>{item.name}</span>
+                <span className="badge subtle" style={{marginLeft:8, fontSize:'12px'}}>{item.code}</span>
+              </div>
+              <span className="label" style={{fontSize:'14px', fontWeight:600}}>{formatCurrency(item.totalValue)}</span>
             </div>
-          </li>
+          </motion.div>
         ))}
-      </ol>
+      </div>
     )
   }
 
   const renderPartnerList = (items = []) => {
-    if (!items.length) return <p className="small" style={{marginTop:8}}>No partner data available.</p>
+    if (!items.length) return (
+      <div className="small" style={{marginTop:8, padding:12, textAlign:'center', opacity:0.7}}>
+        <p>No trading partner data available in database.</p>
+        <p className="tiny">Data may need to be imported from external trade statistics.</p>
+      </div>
+    )
     return (
-      <ol className="metric-list">
-        {items.map(item => (
-          <li key={item.code}>
-            <div className="metric-item">
-              <span><strong>{item.name}</strong> <span className="badge subtle">{item.code}</span></span>
-              <span className="metric-value">{formatCurrency(item.totalValue)}</span>
+      <div style={{display:'grid', gap:12}}>
+        {items.map((item, index) => (
+          <motion.div key={item.code} className="metric-card"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+              <div>
+                <span style={{fontSize:'16px', fontWeight:600, color:'var(--color-text)'}}>{item.name}</span>
+                <span className="badge subtle" style={{marginLeft:8, fontSize:'12px'}}>{item.code}</span>
+              </div>
+              <span className="label" style={{fontSize:'14px', fontWeight:600}}>{formatCurrency(item.totalValue)}</span>
             </div>
-          </li>
+          </motion.div>
         ))}
-      </ol>
+      </div>
     )
   }
 
@@ -112,14 +132,10 @@ export default function InsightsPage() {
           Explore headline trade metrics by reporting market, including leading products, tariff intensity and partner exposure.
         </p>
 
-        <div className="inline-fields" style={{marginBottom:16}}>
-          <div className="field" style={{maxWidth:260}}>
+        <div className="inline-fields field-cluster" style={{marginBottom:16}}>
+          <div className="field" style={{flex: '1 1 220px', maxWidth:260}}>
             <label htmlFor="countrySelect">Country</label>
-            <select id="countrySelect" value={country} onChange={e => setCountry(e.target.value)}>
-              {COUNTRY_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+            <Select id="countrySelect" value={country} onChange={setCountry} options={COUNTRIES} />
           </div>
         </div>
 
@@ -135,39 +151,63 @@ export default function InsightsPage() {
         )}
 
         {!loading && insights && (
-          <div style={{display:'grid', gap:24, marginTop:24}}>
-            <div className="metrics-row" style={{display:'grid', gap:24, gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))'}}>
-              <section className="metric-panel" aria-labelledby="importsHeading">
-                <h3 id="importsHeading">Top Imports</h3>
+          <motion.div style={{marginTop:32}} aria-live="polite"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}>
+            
+            <h3 className="neon-subtle" style={{fontWeight:600, marginBottom:16}}>Trade Analytics Overview</h3>
+            
+            <div style={{display:'grid', gap:24, gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', marginBottom:24}}>
+              <motion.section aria-labelledby="importsHeading"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}>
+                <h4 id="importsHeading" className="label" style={{marginBottom:12, fontSize:'14px', fontWeight:600}}>Top Imports</h4>
                 {renderProductList(insights.topImports)}
-              </section>
-              <section className="metric-panel" aria-labelledby="exportsHeading">
-                <h3 id="exportsHeading">Top Exports</h3>
+              </motion.section>
+              
+              <motion.section aria-labelledby="exportsHeading"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}>
+                <h4 id="exportsHeading" className="label" style={{marginBottom:12, fontSize:'14px', fontWeight:600}}>Top Exports</h4>
                 {renderProductList(insights.topExports)}
-              </section>
+              </motion.section>
             </div>
 
-            <section className="metric-panel" aria-labelledby="tariffHeading">
-              <h3 id="tariffHeading">Average Tariff Levels</h3>
-              <div className="metric-grid" style={{display:'grid', gap:16, gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))'}}>
-                <div className="metric-card">
+            {/* Average Tariff Levels Cards */}
+            <div style={{marginBottom:20}}>
+              <h4 className="label" style={{marginBottom:12, fontSize:'14px', fontWeight:600}}>Average Tariff Levels</h4>
+              <div style={{display:'grid', gap:16, gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))'}}>
+                <motion.div className="metric-card"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}>
                   <span className="label">Inbound (Imports)</span>
-                  <span className="metric-highlight">{formatPercent(insights.averageImportTariff)}</span>
-                  <p className="tiny">Mean base rate across tariff schedules applied to inbound goods.</p>
-                </div>
-                <div className="metric-card">
+                  <span style={{fontSize:'18px', fontWeight:600, color:'var(--color-text)'}}>{formatPercent(insights.averageImportTariff)}</span>
+                  <p className="tiny" style={{marginTop:4, opacity:0.7}}>Mean base rate across tariff schedules applied to inbound goods.</p>
+                </motion.div>
+                <motion.div className="metric-card"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.35 }}>
                   <span className="label">Outbound (Exports)</span>
-                  <span className="metric-highlight">{formatPercent(insights.averageExportTariff)}</span>
-                  <p className="tiny">Mean base rate negotiated on export corridors from the selected country.</p>
-                </div>
+                  <span style={{fontSize:'18px', fontWeight:600, color:'var(--color-text)'}}>{formatPercent(insights.averageExportTariff)}</span>
+                  <p className="tiny" style={{marginTop:4, opacity:0.7}}>Mean base rate negotiated on export corridors from the selected country.</p>
+                </motion.div>
               </div>
-            </section>
+            </div>
 
-            <section className="metric-panel" aria-labelledby="partnersHeading">
-              <h3 id="partnersHeading">Major Trade Partners</h3>
+            {/* Major Trading Partners */}
+            <motion.section aria-labelledby="partnersHeading"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}>
+              <h4 id="partnersHeading" className="label" style={{marginBottom:12, fontSize:'14px', fontWeight:600}}>Major Trade Partners</h4>
               {renderPartnerList(insights.majorPartners)}
-            </section>
-          </div>
+            </motion.section>
+          </motion.div>
         )}
 
         {!loading && !insights && !error && (
