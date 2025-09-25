@@ -30,5 +30,7 @@ app:
   jwt:
     secret: fvbMVJWfii+dPc5Ih2W6s9IC7C+fIdZgC2B/VVnEjBM=
     expirationMs: 86400000 # 1 day
-
+gemini:
+  api:
+    key: ${AIzaSyCxgqgrYbMCQs9178XiPkabKLKkMGi9q-g}
 # Swagger UI path: http://localhost:8080/swagger-ui/index.html

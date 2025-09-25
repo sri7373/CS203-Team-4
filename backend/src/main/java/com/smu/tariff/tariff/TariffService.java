@@ -21,6 +21,7 @@ import com.smu.tariff.tariff.dto.TariffCalcRequest;
 import com.smu.tariff.tariff.dto.TariffCalcResponse;
 import com.smu.tariff.tariff.dto.TariffRateDto;
 import com.smu.tariff.user.User;
+import com.smu.tariff.ai.GeminiClient;
 
 @Service
 @Transactional
@@ -88,9 +89,28 @@ public class TariffService {
         resp.additionalFee = rate.getAdditionalFee();
         resp.totalCost = total;
         resp.notes = "Total = declaredValue + (declaredValue * baseRate) + additionalFee";
+        resp.aiSummary = null; // to be filled later
 
         logQuery("CALCULATE", String.format("{origin:%s,dest:%s,cat:%s,val:%s,date:%s}",
                 resp.originCountryCode, resp.destinationCountryCode, resp.productCategoryCode, declared, date));
+
+        // ai documentations
+        String prompt = String.format(
+            "Summarize this tariff calculation clearly in business terms:\n" +
+            "Origin: %s\nDestination: %s\nProduct: %s\nDeclared Value: %s\nTariff: %s\nFee: %s\nTotal: %s",
+            resp.originCountryCode, resp.destinationCountryCode, resp.productCategoryCode,
+            resp.declaredValue, resp.tariffAmount, resp.additionalFee, resp.totalCost
+        );
+
+        try {
+            GeminiClient gemini = new GeminiClient(System.getenv("GEMINI_API_KEY"));
+            String aiRaw = gemini.generateSummary(prompt);
+            resp.aiSummary = aiRaw; // For now you’ll see the full JSON response
+        } catch (Exception e) {
+            resp.aiSummary = "AI summary unavailable.";
+        }
+// resp.aiSummary = "AI summary unavailable."; // Temporarily disable AI feature
+
 
         return resp;
     }
