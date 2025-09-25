@@ -5,6 +5,7 @@ import com.smu.tariff.tariff.dto.TariffCalcResponse;
 import com.smu.tariff.tariff.dto.TariffRateDto;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public class TariffController {
 
     // CREATE a new tariff rule
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TariffRateDto> create(@RequestBody @Valid TariffRateDto dto) {
         return ResponseEntity.ok(tariffService.createTariff(dto));
     }
@@ -51,12 +53,14 @@ public class TariffController {
 
     // UPDATE a tariff rule by ID
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TariffRateDto> update(@PathVariable Long id, @RequestBody @Valid TariffRateDto dto) {
         return ResponseEntity.ok(tariffService.updateTariff(id, dto));
     }
 
     // DELETE a tariff rule by ID
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         tariffService.deleteTariff(id);
         return ResponseEntity.noContent().build();

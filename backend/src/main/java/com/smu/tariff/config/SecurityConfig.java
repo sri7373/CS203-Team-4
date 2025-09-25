@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -68,11 +69,15 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(
                             "/api/auth/**",
-                            "/api/tariffs/**",
                             "/v3/api-docs/**",
                             "/swagger-ui/**",
                             "/swagger-ui.html"
                     ).permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/tariffs/**").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/tariffs/calculate").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/tariffs").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.PUT, "/api/tariffs/**").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.DELETE, "/api/tariffs/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             )
             .httpBasic(Customizer.withDefaults())
