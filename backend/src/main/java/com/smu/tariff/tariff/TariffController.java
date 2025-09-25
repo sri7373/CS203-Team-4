@@ -4,7 +4,10 @@ import com.smu.tariff.tariff.dto.TariffCalcRequest;
 import com.smu.tariff.tariff.dto.TariffCalcResponse;
 import com.smu.tariff.tariff.dto.TariffRateDto;
 import com.smu.tariff.tariff.dto.TariffRateDtoPost;
+import org.springframework.http.MediaType;
 import jakarta.validation.Valid;
+
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -21,11 +24,13 @@ public class TariffController {
         this.tariffService = tariffService;
     }
 
+    //To calculate tariff based on request
     @PostMapping("/calculate")
     public ResponseEntity<TariffCalcResponse> calculate(@Valid @RequestBody TariffCalcRequest request) {
         return ResponseEntity.ok(tariffService.calculate(request));
     }
 
+    //To fetch tariff rates based on search criteria
     @GetMapping("/rates")
     public ResponseEntity<List<TariffRateDto>> search(@RequestParam(required = false) String origin,
             @RequestParam(required = false) String destination,
@@ -65,5 +70,21 @@ public class TariffController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         tariffService.deleteTariff(id);
         return ResponseEntity.noContent().build();
+    }
+    //To generate PDF
+    @CrossOrigin(origins = "http://localhost:3000")
+    @PostMapping(value = "/calculate/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> calculatePdf(@Valid @RequestBody TariffCalcRequest req) {
+        //Calculate tariff
+        TariffCalcResponse resp = tariffService.calculate(req);
+
+        //Generate PDF
+        byte[] pdfBytes = tariffService.generatePdfReport(resp);
+
+        //Return PDF as response
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=tariff-report.pdf")
+                .contentType(MediaType.valueOf(MediaType.APPLICATION_PDF_VALUE))
+                .body(pdfBytes);
     }
 }

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.io.ByteArrayOutputStream;
 import java.util.stream.Collectors;
 
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,6 +24,9 @@ import com.smu.tariff.tariff.dto.TariffCalcResponse;
 import com.smu.tariff.tariff.dto.TariffRateDto;
 import com.smu.tariff.tariff.dto.TariffRateDtoPost;
 import com.smu.tariff.user.User;
+
+import com.lowagie.text.*;
+import com.lowagie.text.pdf.*;
 
 @Service
 @Transactional
@@ -60,6 +64,8 @@ public class TariffService {
 
         LocalDate date = (req.date == null || req.date.isBlank()) ? LocalDate.now() : LocalDate.parse(req.date);
 
+        
+        // Fetch entities, throw error if not found
         Country origin = countryRepository.findByCode(req.originCountryCode.toUpperCase())
                 .orElseThrow(() -> new InvalidTariffRequestException(
                         "Unknown origin country code: " + req.originCountryCode));
@@ -82,6 +88,7 @@ public class TariffService {
         BigDecimal tariffAmount = declared.multiply(rate.getBaseRate()).setScale(2, RoundingMode.HALF_UP);
         BigDecimal total = declared.add(tariffAmount).add(rate.getAdditionalFee()).setScale(2, RoundingMode.HALF_UP);
 
+        // Prepare response
         TariffCalcResponse resp = new TariffCalcResponse();
         resp.originCountryCode = origin.getCode();
         resp.destinationCountryCode = dest.getCode();
@@ -94,7 +101,8 @@ public class TariffService {
         resp.totalCost = total;
         resp.notes = "Total = declaredValue + (declaredValue * baseRate) + additionalFee";
 
-        logQuery("CALCULATE", "{origin:%s,dest:%s,cat:%s,val:%s,date:%s}".formatted(
+        // Log the query
+        logQuery("CALCULATE", String.format("{origin:%s,dest:%s,cat:%s,val:%s,date:%s}",
                 resp.originCountryCode, resp.destinationCountryCode, resp.productCategoryCode, declared, date));
 
         return resp;
@@ -235,4 +243,53 @@ public class TariffService {
 
     // ^CRUD satisfied
 
+    public byte[] generatePdfReport(TariffCalcResponse resp) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        Document document = new Document();
+        try {
+            PdfWriter.getInstance(document, out);
+            document.open();
+
+            // Title
+            document.add(new Paragraph("Tariff Calculation Report", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16)));
+            document.add(new Paragraph("Generated on: " + LocalDate.now()));
+            document.add(new Paragraph(" "));
+
+            // Input details
+            document.add(new Paragraph("Origin Country: " + resp.originCountryCode));
+            document.add(new Paragraph("Destination Country: " + resp.destinationCountryCode));
+            document.add(new Paragraph("Product Category: " + resp.productCategoryCode));
+            document.add(new Paragraph("Effective Date: " + resp.effectiveDate));
+            document.add(new Paragraph("Declared Value: " + resp.declaredValue));
+            document.add(new Paragraph(" "));
+
+            // Calculation details in table
+            PdfPTable table = new PdfPTable(2);
+            table.setWidthPercentage(100);
+
+            table.addCell("Base Rate");
+            table.addCell(resp.baseRate.toPlainString());
+
+            table.addCell("Tariff Amount");
+            table.addCell(resp.tariffAmount.toPlainString());
+
+            table.addCell("Additional Fee");
+            table.addCell(resp.additionalFee.toPlainString());
+
+            table.addCell("Total Cost");
+            table.addCell(resp.totalCost.toPlainString());
+
+            document.add(table);
+
+            // Notes
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph("Notes: " + resp.notes));
+
+            document.close();
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating PDF", e);
+        }
+
+        return out.toByteArray();
+    }
 }
