@@ -185,21 +185,10 @@ public class TradeAnalyticsService {
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
-            BigDecimal avgBaseRate;
-            if (rates.size() > 0) {
-                avgBaseRate = sum.divide(BigDecimal.valueOf(rates.size()), 6, RoundingMode.HALF_UP);
-            } else {
-                avgBaseRate = BigDecimal.ZERO;
-            }
+            BigDecimal avgBaseRate = sum.divide(BigDecimal.valueOf(rates.size()), 6, RoundingMode.HALF_UP);
             
             // Convert to percentage
             BigDecimal avgBaseRatePercent = avgBaseRate.multiply(BigDecimal.valueOf(100));
-            
-            // Debug logging for Singapore-USA issue
-            if (code.equals("USA") || code.equals("SGP")) {
-                System.out.println("Import Partner " + code + ": " + rates.size() + " rates, sum=" + sum + 
-                                 ", avgBaseRate=" + avgBaseRate + ", avgPercent=" + avgBaseRatePercent);
-            }
             
             dto.totalValue = avgBaseRatePercent;
             dto.rateCount = rates.size(); // Track how many rates went into this calculation
@@ -220,20 +209,9 @@ public class TradeAnalyticsService {
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
-            BigDecimal avgBaseRate;
-            if (rates.size() > 0) {
-                avgBaseRate = sum.divide(BigDecimal.valueOf(rates.size()), 6, RoundingMode.HALF_UP);
-            } else {
-                avgBaseRate = BigDecimal.ZERO;
-            }
+            BigDecimal avgBaseRate = sum.divide(BigDecimal.valueOf(rates.size()), 6, RoundingMode.HALF_UP);
             
             BigDecimal avgBaseRatePercent = avgBaseRate.multiply(BigDecimal.valueOf(100));
-            
-            // Debug logging for Singapore-USA issue
-            if (code.equals("USA") || code.equals("SGP")) {
-                System.out.println("Export Partner " + code + ": " + rates.size() + " rates, sum=" + sum + 
-                                 ", avgBaseRate=" + avgBaseRate + ", avgPercent=" + avgBaseRatePercent);
-            }
             
             PartnerMetricDto existing = partnerMap.get(code);
             if (existing != null) {
@@ -244,11 +222,6 @@ public class TradeAnalyticsService {
                 int totalRates = existing.rateCount + rates.size();
                 existing.totalValue = combinedSum.divide(BigDecimal.valueOf(totalRates), 4, RoundingMode.HALF_UP);
                 existing.rateCount = totalRates;
-                
-                if (code.equals("USA") || code.equals("SGP")) {
-                    System.out.println("Combined Partner " + code + ": totalRates=" + totalRates + 
-                                     ", finalAverage=" + existing.totalValue);
-                }
             } else {
                 PartnerMetricDto dto = new PartnerMetricDto();
                 dto.code = code;
