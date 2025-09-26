@@ -179,20 +179,30 @@ public class TradeAnalyticsService {
             dto.code = code;
             dto.name = rates.get(0).getOrigin().getName();
             
-            // Calculate average base rate as percentage
-            BigDecimal avgBaseRate = rates.stream()
+            // Calculate average base rate as percentage - properly handle multiple rates
+            BigDecimal sum = rates.stream()
                     .map(TariffRate::getBaseRate)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add)
-                    .divide(BigDecimal.valueOf(rates.size()), 4, RoundingMode.HALF_UP);
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             
-            // Convert to percentage but cap at reasonable maximum (100%)
-            BigDecimal avgBaseRatePercent = avgBaseRate.multiply(BigDecimal.valueOf(100));
-            if (avgBaseRatePercent.compareTo(BigDecimal.valueOf(100)) > 0) {
-                avgBaseRatePercent = BigDecimal.valueOf(100); // Cap at 100%
+            BigDecimal avgBaseRate;
+            if (rates.size() > 0) {
+                avgBaseRate = sum.divide(BigDecimal.valueOf(rates.size()), 6, RoundingMode.HALF_UP);
+            } else {
+                avgBaseRate = BigDecimal.ZERO;
             }
             
-            // Use just the base rate percentage as the value (no additional fee mixing)
+            // Convert to percentage
+            BigDecimal avgBaseRatePercent = avgBaseRate.multiply(BigDecimal.valueOf(100));
+            
+            // Debug logging for Singapore-USA issue
+            if (code.equals("USA") || code.equals("SGP")) {
+                System.out.println("Import Partner " + code + ": " + rates.size() + " rates, sum=" + sum + 
+                                 ", avgBaseRate=" + avgBaseRate + ", avgPercent=" + avgBaseRatePercent);
+            }
+            
             dto.totalValue = avgBaseRatePercent;
+            dto.rateCount = rates.size(); // Track how many rates went into this calculation
             partnerMap.put(code, dto);
         }
 
@@ -204,28 +214,47 @@ public class TradeAnalyticsService {
             String code = entry.getKey();
             List<TariffRate> rates = entry.getValue();
             
-            // Calculate average base rate as percentage
-            BigDecimal avgBaseRate = rates.stream()
+            // Calculate average base rate as percentage - properly handle multiple rates
+            BigDecimal sum = rates.stream()
                     .map(TariffRate::getBaseRate)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add)
-                    .divide(BigDecimal.valueOf(rates.size()), 4, RoundingMode.HALF_UP);
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             
-            // Convert to percentage but cap at reasonable maximum (100%)
+            BigDecimal avgBaseRate;
+            if (rates.size() > 0) {
+                avgBaseRate = sum.divide(BigDecimal.valueOf(rates.size()), 6, RoundingMode.HALF_UP);
+            } else {
+                avgBaseRate = BigDecimal.ZERO;
+            }
+            
             BigDecimal avgBaseRatePercent = avgBaseRate.multiply(BigDecimal.valueOf(100));
-            if (avgBaseRatePercent.compareTo(BigDecimal.valueOf(100)) > 0) {
-                avgBaseRatePercent = BigDecimal.valueOf(100); // Cap at 100%
+            
+            // Debug logging for Singapore-USA issue
+            if (code.equals("USA") || code.equals("SGP")) {
+                System.out.println("Export Partner " + code + ": " + rates.size() + " rates, sum=" + sum + 
+                                 ", avgBaseRate=" + avgBaseRate + ", avgPercent=" + avgBaseRatePercent);
             }
             
             PartnerMetricDto existing = partnerMap.get(code);
             if (existing != null) {
-                // Average the import and export tariff rates
-                existing.totalValue = existing.totalValue.add(avgBaseRatePercent)
-                        .divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
+                // Properly combine import and export averages
+                // Take weighted average based on the number of rates
+                BigDecimal combinedSum = existing.totalValue.multiply(BigDecimal.valueOf(existing.rateCount))
+                        .add(avgBaseRatePercent.multiply(BigDecimal.valueOf(rates.size())));
+                int totalRates = existing.rateCount + rates.size();
+                existing.totalValue = combinedSum.divide(BigDecimal.valueOf(totalRates), 4, RoundingMode.HALF_UP);
+                existing.rateCount = totalRates;
+                
+                if (code.equals("USA") || code.equals("SGP")) {
+                    System.out.println("Combined Partner " + code + ": totalRates=" + totalRates + 
+                                     ", finalAverage=" + existing.totalValue);
+                }
             } else {
                 PartnerMetricDto dto = new PartnerMetricDto();
                 dto.code = code;
                 dto.name = rates.get(0).getDestination().getName();
                 dto.totalValue = avgBaseRatePercent;
+                dto.rateCount = rates.size();
                 partnerMap.put(code, dto);
             }
         }
