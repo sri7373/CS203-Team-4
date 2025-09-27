@@ -76,19 +76,31 @@ export default function QueryLogsPage() {
               <table className="logs-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th style={{ textAlign: 'left', padding: 8 }}>When</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Timestamp</th>
                     <th style={{ textAlign: 'left', padding: 8 }}>User</th>
-                    <th style={{ textAlign: 'left', padding: 8 }}>Type</th>
-                    <th style={{ textAlign: 'left', padding: 8 }}>Params</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Action</th>
+                    
+                    <th style={{ textAlign: 'left', padding: 8 }}>Category</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Value</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Date</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Details</th>
                   </tr>
                 </thead>
                 <tbody>
                   {logs.map((l) => (
                     <tr key={l.id} style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
                       <td style={{ padding: 10, whiteSpace: 'nowrap' }}>{l.createdAt ? new Date(l.createdAt).toLocaleString() : '-'}</td>
-                      <td style={{ padding: 10 }}>{l.username || (l.userRole ? `${l.userRole}` : 'Anonymous')}</td>
-                      <td style={{ padding: 10 }}>{l.type}</td>
-                      <td style={{ padding: 10, fontFamily: 'monospace', fontSize: 12 }}>{l.params}</td>
+                      <td style={{ padding: 10 }}>{l.username || 'Anonymous'}</td>
+                      <td style={{ padding: 10 }}>{l.action || l.type || '-'}</td>
+                      <td style={{ padding: 10 }}>{l.category || '-'}</td>
+                      <td style={{ padding: 10 }}>{l.value || '-'}</td>
+                      <td style={{ padding: 10 }}>{l.date || '-'}</td>
+                      <td style={{ padding: 10 }}>
+                        <details>
+                          <summary style={{ cursor: 'pointer' }}>Raw</summary>
+                          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 12 }}>{l.params || l.rawParams || '-'}</pre>
+                        </details>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

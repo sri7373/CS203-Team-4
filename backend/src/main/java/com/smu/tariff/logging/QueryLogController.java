@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/query-logs")
@@ -39,30 +40,75 @@ public class QueryLogController {
             List<QueryLog> logs = queryLogRepository.findAllWithUser();
             System.out.println("Retrieved " + logs.size() + " logs from database (sorted by createdAt desc)");
 
+            // Build typed DTOs with requested columns: Timestamp, User, Action, Origin, Destination, Category, Value, Date
+            List<Map<String, Object>> dtoList = new ArrayList<>();
             for (QueryLog log : logs) {
-                Map<String, Object> logData = new HashMap<>();
-                logData.put("id", log.getId());
-                logData.put("type", log.getType());
-                logData.put("params", log.getParams());
-                logData.put("createdAt", log.getCreatedAt().toString());
-                if (log.getUser() != null) {
-                    logData.put("username", log.getUser().getUsername());
-                    // Role enum present on User
-                    try {
-                        logData.put("userRole", log.getUser().getRole().name());
-                    } catch (Exception e) {
-                        logData.put("userRole", "UNKNOWN");
-                    }
-                } else {
-                    logData.put("username", "Anonymous");
-                    logData.put("userRole", "USER");
-                }
-                result.add(logData);
+                QueryLogDto dto = new QueryLogDto();
+                // fill raw DB values
+                dto.setId(log.getId());
+                dto.setTimestamp(log.getCreatedAt() == null ? null : log.getCreatedAt().toString());
+                dto.setType(log.getType());
+                dto.setRawParams(log.getParams());
 
-                if (result.size() <= 3) { // Log first few for debugging
-                    System.out.println("Log " + log.getId() + ": " + log.getType() + " - " + log.getParams() + " (user=" + logData.get("username") + ")");
+                // fill user info if present
+                if (log.getUser() != null) {
+                    dto.setUserId(log.getUser().getId());
+                    dto.setUser(Optional.ofNullable(log.getUser().getUsername()).orElse(""));
+                    dto.setUserEmail(Optional.ofNullable(log.getUser().getEmail()).orElse(""));
+                    try {
+                        dto.setUserRole(log.getUser().getRole() == null ? "" : log.getUser().getRole().name());
+                    } catch (Exception ex) {
+                        dto.setUserRole("");
+                    }
+                    dto.setUserCreatedAt(log.getUser().getCreatedAt() == null ? "" : log.getUser().getCreatedAt().toString());
+                } else {
+                    dto.setUserId(null);
+                    dto.setUser("Anonymous");
+                    dto.setUserEmail("");
+                    dto.setUserRole("");
+                    dto.setUserCreatedAt("");
+                }
+
+                // set action (type is also included raw)
+                dto.setAction(log.getType());
+
+                // parse params into semantic fields
+                Map<String, String> parsed = QueryLogParamParser.parse(log.getParams());
+                dto.setOrigin(parsed.getOrDefault("origin", parsed.getOrDefault("from", "-")));
+                dto.setDestination(parsed.getOrDefault("destination", parsed.getOrDefault("to", "-")));
+                dto.setCategory(parsed.getOrDefault("category", parsed.getOrDefault("cat", "-")));
+                dto.setValue(parsed.getOrDefault("value", parsed.getOrDefault("val", "-")));
+                dto.setDate(parsed.getOrDefault("date", "-"));
+
+                Map<String, Object> map = new HashMap<>();
+                // Raw DB columns
+                map.put("id", dto.getId());
+                map.put("createdAt", dto.getTimestamp());
+                map.put("type", dto.getType());
+                map.put("params", parsed.isEmpty() ? log.getParams() : log.getParams());
+
+                // User columns (from joined user, may be null)
+                map.put("userId", dto.getUserId());
+                map.put("username", dto.getUser());
+                map.put("userEmail", dto.getUserEmail());
+                map.put("userRole", dto.getUserRole());
+                map.put("userCreatedAt", dto.getUserCreatedAt());
+
+                // Parsed & friendly columns
+                map.put("action", dto.getAction());
+                map.put("origin", dto.getOrigin());
+                map.put("destination", dto.getDestination());
+                map.put("category", dto.getCategory());
+                map.put("value", dto.getValue());
+                map.put("date", dto.getDate());
+
+                dtoList.add(map);
+
+                if (dtoList.size() <= 3) {
+                    System.out.println("Log DTO " + dto.getId() + ": " + dto.getAction() + " - " + log.getParams() + " (user=" + dto.getUser() + ")");
                 }
             }
+            result = dtoList;
             
             System.out.println("=== Returning " + result.size() + " logs to frontend ===");
             return ResponseEntity.ok(result);
