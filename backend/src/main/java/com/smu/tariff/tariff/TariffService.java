@@ -16,6 +16,7 @@ import com.smu.tariff.exception.InvalidTariffRequestException;
 import com.smu.tariff.exception.TariffNotFoundException;
 import com.smu.tariff.logging.QueryLog;
 import com.smu.tariff.logging.QueryLogRepository;
+import com.smu.tariff.logging.QueryLogService;
 import com.smu.tariff.product.ProductCategory;
 import com.smu.tariff.product.ProductCategoryRepository;
 import com.smu.tariff.tariff.dto.TariffCalcRequest;
@@ -35,19 +36,18 @@ public class TariffService {
     private final TariffRateRepository tariffRateRepository;
     private final CountryRepository countryRepository;
     private final ProductCategoryRepository productCategoryRepository;
-    private final QueryLogRepository queryLogRepository;
-    private final UserRepository userRepository;
+    private final com.smu.tariff.logging.QueryLogService queryLogService;
 
     public TariffService(TariffRateRepository tariffRateRepository,
                          CountryRepository countryRepository,
                          ProductCategoryRepository productCategoryRepository,
                          QueryLogRepository queryLogRepository,
-                         UserRepository userRepository) {
+                         UserRepository userRepository,
+                         com.smu.tariff.logging.QueryLogService queryLogService) {
         this.tariffRateRepository = tariffRateRepository;
         this.countryRepository = countryRepository;
         this.productCategoryRepository = productCategoryRepository;
-        this.queryLogRepository = queryLogRepository;
-        this.userRepository = userRepository;
+        this.queryLogService = queryLogService;
     }
 
     public TariffCalcResponse calculate(TariffCalcRequest req) {
@@ -116,9 +116,9 @@ public class TariffService {
         resp.totalCost = total;
         resp.notes = "Total = declaredValue + (declaredValue * baseRate) + additionalFee";
 
-        // Log the query
-        logQuery("CALCULATE", String.format("{origin:%s,dest:%s,cat:%s,val:%s,date:%s}",
-                resp.originCountryCode, resp.destinationCountryCode, resp.productCategoryCode, declared, date));
+    // Log the query (attach authenticated user if present)
+    queryLogService.log("CALCULATE", String.format("{origin:%s,dest:%s,cat:%s,val:%s,date:%s}",
+        resp.originCountryCode, resp.destinationCountryCode, resp.productCategoryCode, declared, date));
 
         return resp;
     }
@@ -158,26 +158,11 @@ public class TariffService {
             return dto;
         }).collect(java.util.stream.Collectors.toList());
 
-        logQuery("SEARCH", String.format("{origin:%s,dest:%s,cat:%s}", originCode, destCode, catCode));
+    queryLogService.log("SEARCH", String.format("{origin:%s,dest:%s,cat:%s}", originCode, destCode, catCode));
         return dtos;
     }
 
-    private void logQuery(String type, String params) {
-        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User user = null;
-        if (auth != null) {
-            Object principal = auth.getPrincipal();
-            if (principal instanceof User) {
-                user = (User) principal;
-            } else if (principal instanceof UserDetails) {
-                String username = ((UserDetails) principal).getUsername();
-                user = userRepository.findByUsername(username).orElse(null);
-            }
-        }
-
-        System.out.println("logQuery: saving log for user=" + (user != null ? user.getUsername() + "(" + user.getRole() + ")" : "<anonymous>"));
-        queryLogRepository.save(new QueryLog(user, type, params));
-    }
+    // ... moved logging responsibility to QueryLogService
 
     public byte[] generatePdfReport(TariffCalcResponse resp) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();

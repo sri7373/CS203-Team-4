@@ -18,8 +18,28 @@ export default function QueryLogsPage() {
       const res = await api.get('/api/query-logs')
       setLogs(res.data || [])
     } catch (err) {
+      // Log full error for debugging in browser console
       console.error('Failed to load query logs', err)
-      setError(err?.formattedMessage || err?.message || 'Failed to load query logs')
+      // Prefer formattedMessage (set by api interceptor), then HTTP response body if present, then generic message
+      const httpBody = err?.response?.data
+      const bodyMsg = httpBody ? (typeof httpBody === 'string' ? httpBody : JSON.stringify(httpBody, null, 2)) : null
+      const status = err?.response?.status
+      const formatted = err?.formattedMessage || err?.message || bodyMsg || 'Failed to load query logs'
+      setError(formatted + (bodyMsg ? `\n\nResponse body:\n${bodyMsg}` : '') )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function testEndpoint() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await api.get('/api/query-logs/test')
+      setError(`Test OK: ${JSON.stringify(res.data)}`)
+    } catch (err) {
+      const body = err?.response?.data ? JSON.stringify(err.response.data, null, 2) : err?.message
+      setError(`Test failed: ${err?.formattedMessage || err?.message}\n\n${body}`)
     } finally {
       setLoading(false)
     }
@@ -38,6 +58,9 @@ export default function QueryLogsPage() {
           <div>
             <button className="primary" type="button" onClick={fetchLogs} disabled={loading} aria-label="Refresh logs">
               {loading ? 'Refreshing…' : 'Refresh'}
+            </button>
+            <button className="secondary" type="button" onClick={testEndpoint} disabled={loading} style={{marginLeft:8}} aria-label="Test endpoint">
+              Test
             </button>
           </div>
         </div>
