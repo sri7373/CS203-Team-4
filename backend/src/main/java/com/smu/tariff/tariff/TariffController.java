@@ -27,12 +27,14 @@ public class TariffController {
 
     //To calculate tariff based on request
     @PostMapping("/calculate")
+    @PreAuthorize("hasRole('ANALYST') or hasRole('ADMIN')")
     public ResponseEntity<TariffCalcResponse> calculate(@Valid @RequestBody TariffCalcRequest request) {
         return ResponseEntity.ok(tariffService.calculate(request));
     }
 
     //To fetch tariff rates based on search criteria
     @GetMapping("/rates")
+    @PreAuthorize("hasRole('ANALYST') or hasRole('ADMIN')")
     public ResponseEntity<List<TariffRateDto>> search(@RequestParam(required = false) String origin,
             @RequestParam(required = false) String destination,
             @RequestParam(required = false) String category) {
@@ -48,12 +50,14 @@ public class TariffController {
 
     // READ all tariff rules
     @GetMapping
+    @PreAuthorize("hasRole('ANALYST') or hasRole('ADMIN')")
     public ResponseEntity<List<TariffRateDto>> getAll() {
         return ResponseEntity.ok(tariffService.getAllTariffs());
     }
 
     // READ a single tariff rule by ID
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ANALYST') or hasRole('ADMIN')")
     public ResponseEntity<TariffRateDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(tariffService.getTariffById(id));
     }
@@ -75,6 +79,7 @@ public class TariffController {
     //To generate PDF
     @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping(value = "/calculate/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("hasRole('ANALYST') or hasRole('ADMIN')")
     public ResponseEntity<byte[]> calculatePdf(@Valid @RequestBody TariffCalcRequest req) {
         //Calculate tariff
         TariffCalcResponse resp = tariffService.calculate(req);
