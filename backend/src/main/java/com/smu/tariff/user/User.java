@@ -28,7 +28,7 @@ public class User implements UserDetails {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private Role role = Role.ANALYST;
+    private Role role = Role.USER;
 
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
@@ -63,7 +63,7 @@ public class User implements UserDetails {
     // UserDetails
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+        return List.of(new SimpleGrantedAuthority(role.name()));
     }
     @Override
     public boolean isAccountNonExpired() { return true; }
