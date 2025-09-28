@@ -21,6 +21,8 @@ import com.smu.tariff.security.JwtAuthFilter;
 import com.smu.tariff.security.JwtService;
 import com.smu.tariff.user.UserRepository;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -70,7 +72,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(
                             "/api/auth/**",
-                            "/api/tariffs/**",
                             "/api/trade/**",
                             "/v3/api-docs/**",
                             "/swagger-ui/**",
@@ -84,6 +85,14 @@ public class SecurityConfig {
                     .anyRequest().authenticated()
             )
             .httpBasic(Customizer.withDefaults())
+            .exceptionHandling(ex -> ex
+                    .authenticationEntryPoint((request, response, authException) -> {
+                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                    })
+                    .accessDeniedHandler((request, response, accessDeniedException) -> {
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden");
+                    })
+            )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 
