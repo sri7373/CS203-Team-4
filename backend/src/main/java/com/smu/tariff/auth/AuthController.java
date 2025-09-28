@@ -46,7 +46,7 @@ public class AuthController {
         if (userRepository.existsByEmail(request.email)) {
             return ResponseEntity.badRequest().body("Email is taken");
         }
-        Role role = request.role == null ? Role.ANALYST : request.role;
+        Role role = request.role == null ? Role.USER : request.role;
         User user = new User(request.username, request.email,
                 passwordEncoder.encode(request.password), role);
         userRepository.save(user);
