@@ -559,18 +559,20 @@ export default function CalculatePage() {
                     </span>
                   </motion.div>
                   <motion.div
-                    className="small neon-subtle"
-                    style={{ marginTop: -12, marginBottom: 24 }}
-                    initial={{ opacity:0, y:10 }}
-                    animate={{ opacity:1, y:0 }}
-                    transition={{ duration:.4 }}
-                  >
-                    <div className="field" style={{ flex: "1 1 260px" }}>AI Summary</div>
-                    <div 
-                      style={{ margin:0 }}
-                      dangerouslySetInnerHTML={{ __html: res.aiSummary }}
-                    />
-              </motion.div>
+  className="small neon-subtle w-full max-w-5xl mx-auto p-8"
+  style={{ marginTop: -12, marginBottom: 24 }}
+  initial={{ opacity: 0, y: 10 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.4 }}
+>
+  <div className="text-lg font-semibold mb-4">AI Summary</div>
+  
+  <div
+    className="prose max-w-none text-justify leading-relaxed"
+    dangerouslySetInnerHTML={{ __html: res.aiSummary }}
+  />
+</motion.div>
+
 
                 </div>
 
