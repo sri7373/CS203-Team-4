@@ -91,19 +91,23 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/trade/**").authenticated()
 
                         // Admin only
-                        .requestMatchers(HttpMethod.POST, "/api/tariffs").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/tariffs/**").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/tariffs/**").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/tariffs").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/tariffs/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/tariffs/**").hasRole("ADMIN")
 
                         // Fallback: any other request must be authenticated
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
+                            System.out.println("❌ Hit authenticationEntryPoint: " + authException.getClass().getName());
                             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden");
+                            System.out.println(
+                                    "❌ Hit accessDeniedHandler: " + accessDeniedException.getClass().getName());
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.getWriter().write("Forbidden: " + accessDeniedException.getMessage());
                         }))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
