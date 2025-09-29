@@ -28,6 +28,8 @@ export default function CalculatePage() {
   const downloadPdf = async () => {
     setError(null);
     setPdfLoading(true);
+    const controller = new AbortController();
+    let timeoutId;
     try {
       const payload = {
         originCountryCode: origin,
@@ -37,32 +39,19 @@ export default function CalculatePage() {
         date: date || undefined,
       };
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-      const response = await fetch(
-        "http://localhost:8080/api/tariffs/calculate/pdf",
+      const response = await api.post(
+        "/api/tariffs/calculate/pdf",
+        payload,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          responseType: "blob",
           signal: controller.signal,
+          headers: { Accept: "application/pdf" },
         }
       );
 
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        if (response.status >= 500) {
-          throw new Error("Server error occurred. Please try again.");
-        } else if (response.status === 404) {
-          throw new Error("PDF generation service not found.");
-        } else {
-          throw new Error(`Failed to generate PDF: ${response.status}`);
-        }
-      }
-
-      const blob = await response.blob();
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
 
       // trigger download
@@ -77,27 +66,35 @@ export default function CalculatePage() {
       let errorMessage;
       let isDataUnavailable = false;
 
-      if (err.name === "AbortError") {
-        errorMessage = "PDF generation timed out. Please try again.";
-      } else if (
-        err.message.includes("fetch") ||
-        err.code === "NETWORK_ERROR"
+      if (
+        err.code === "ERR_CANCELED" ||
+        err.name === "CanceledError" ||
+        err.name === "AbortError"
       ) {
+        errorMessage = "PDF generation timed out. Please try again.";
+      } else if (err.response) {
+        const status = err.response.status;
+        if (status >= 500) {
+          errorMessage = "Server error occurred. Please try again.";
+        } else if (status === 404) {
+          isDataUnavailable = true;
+          errorMessage =
+            "PDF generation service is currently unavailable. The calculation feature works normally, but PDF export is temporarily disabled.";
+        } else {
+          errorMessage = `Failed to generate PDF: ${status}`;
+        }
+      } else if (err.request) {
         errorMessage =
           "Network error. Please check your connection and try again.";
-      } else if (
-        err.message.includes("404") ||
-        err.message.includes("not found")
-      ) {
-        isDataUnavailable = true;
-        errorMessage =
-          "PDF generation service is currently unavailable. The calculation feature works normally, but PDF export is temporarily disabled.";
       } else {
         errorMessage = err.message || "PDF generation failed";
       }
 
       setError({ message: errorMessage, isDataUnavailable });
     } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       setPdfLoading(false);
     }
   };
@@ -139,7 +136,7 @@ export default function CalculatePage() {
         err.message?.includes("not found")
       ) {
         isDataUnavailable = true;
-        errorMessage = `No tariff data available for ${origin} → ${destination} (${category}). This trade route may not be covered in our current database, or no tariff schedule is active for the selected date.`;
+        errorMessage = `No tariff data available for ${origin} 遶翫・${destination} (${category}). This trade route may not be covered in our current database, or no tariff schedule is active for the selected date.`;
       } else if (
         err.code === "NETWORK_ERROR" ||
         err.message.includes("Network Error")
@@ -255,7 +252,7 @@ export default function CalculatePage() {
           </div>
           <div className="btn-group" style={{ marginTop: 8 }}>
             <button className="primary" type="submit" disabled={loading}>
-              {loading ? "Calculating…" : "Calculate"}
+              {loading ? "Calculating遯ｶ・ｦ" : "Calculate"}
             </button>
             <button
               type="button"
@@ -587,7 +584,7 @@ export default function CalculatePage() {
                     {formatCurrency(res.totalCost)}
                   </div>
                   <div className="small" style={{ marginTop: 8, opacity: 0.7 }}>
-                    Total = declaredValue + (declaredValue × baseRate) +
+                    Total = declaredValue + (declaredValue ・・・baseRate) +
                     additionalFee
                   </div>
                 </motion.div>

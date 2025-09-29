@@ -64,9 +64,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(
                             "/api/auth/**",
-                "/api/tariffs/**",
-                "/api/query-logs",
-                "/api/query-logs/**",
                             "/api/trade/**",
                             "/v3/api-docs/**",
                             "/swagger-ui/**",
@@ -81,3 +78,4 @@ public class SecurityConfig {
         return http.build();
     }
 }
+
