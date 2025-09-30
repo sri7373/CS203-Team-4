@@ -1,6 +1,7 @@
 package com.smu.tariff.auth;
 
 import com.smu.tariff.user.Role;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

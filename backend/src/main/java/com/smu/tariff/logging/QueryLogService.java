@@ -21,8 +21,9 @@ import jakarta.servlet.http.HttpServletRequest;
 @Transactional
 public class QueryLogService {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
     private static final int MAX_RESULT_LENGTH = 4096;
+
+    private final ObjectMapper mapper;
     private static final Logger logger = LoggerFactory.getLogger(QueryLogService.class);
 
     private final QueryLogRepository queryLogRepository;
@@ -31,10 +32,12 @@ public class QueryLogService {
 
     public QueryLogService(QueryLogRepository queryLogRepository,
                            UserRepository userRepository,
-                           JwtService jwtService) {
+                           JwtService jwtService,
+                           ObjectMapper mapper) {
         this.queryLogRepository = queryLogRepository;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.mapper = mapper;
     }
 
     /**

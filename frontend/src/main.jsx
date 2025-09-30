@@ -10,7 +10,9 @@ import RatesPage from './pages/RatesPage.jsx'
 import InsightsPage from './pages/InsightsPage.jsx'
 import HomePage from './pages/HomePage.jsx'
 import ProtectedRoute from './routes/ProtectedRoute.jsx'
+import AdminRoute from './routes/AdminRoute.jsx'
 import QueryLogsPage from './pages/QueryLogsPage.jsx'
+import AdminTariffsPage from './pages/AdminTariffsPage.jsx'
 
 const root = createRoot(document.getElementById('root'))
 root.render(
@@ -51,6 +53,14 @@ root.render(
               <ProtectedRoute>
                 <QueryLogsPage />
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tariffs"
+            element={
+              <AdminRoute>
+                <AdminTariffsPage />
+              </AdminRoute>
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />
