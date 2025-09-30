@@ -319,6 +319,7 @@ export default function AdminTariffsPage() {
               <label htmlFor="baseRate">Base Rate (decimal)</label>
               <input
                 id="baseRate"
+                className="input"
                 name="baseRate"
                 type="number"
                 step="0.0001"
@@ -333,6 +334,7 @@ export default function AdminTariffsPage() {
               <label htmlFor="additionalFee">Additional Fee</label>
               <input
                 id="additionalFee"
+                className="input"
                 name="additionalFee"
                 type="number"
                 step="0.01"
@@ -347,6 +349,7 @@ export default function AdminTariffsPage() {
               <label htmlFor="effectiveFrom">Effective From</label>
               <input
                 id="effectiveFrom"
+                className="input"
                 name="effectiveFrom"
                 type="date"
                 value={form.effectiveFrom}
@@ -358,6 +361,7 @@ export default function AdminTariffsPage() {
               <label htmlFor="effectiveTo">Effective To (optional)</label>
               <input
                 id="effectiveTo"
+                className="input"
                 name="effectiveTo"
                 type="date"
                 value={form.effectiveTo}
@@ -398,6 +402,7 @@ export default function AdminTariffsPage() {
         >
           <h3 className="neon-subtle" style={{ margin: 0 }}>Configured Tariffs</h3>
           <input
+            className="input admin-filter-input"
             type="search"
             placeholder="Filter by id, origin, destination or category"
             value={filter}
