@@ -28,4 +28,8 @@ public interface TariffRateRepository extends JpaRepository<TariffRate, Long> {
 
     Optional<TariffRate> findTop1ByOriginAndDestinationAndProductCategoryOrderByEffectiveFromDesc(
             Country origin, Country destination, ProductCategory category);
+
+    // Fallback: find the latest rate for a product category where baseRate > 0
+    Optional<TariffRate> findFirstByProductCategoryAndBaseRateGreaterThanOrderByEffectiveFromDesc(
+            ProductCategory category, java.math.BigDecimal threshold);
 }

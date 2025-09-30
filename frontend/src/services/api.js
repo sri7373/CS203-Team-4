@@ -13,6 +13,13 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`
   }
+  // Debug: log whether Authorization header is present (helps trace why protected endpoints return 401)
+  try {
+    // Use console.debug so it is easy to spot in DevTools network/console
+    console.debug('API Request:', config.method?.toUpperCase(), config.url, 'Auth:', !!config.headers['Authorization'])
+  } catch (e) {
+    // ignore logging errors
+  }
   return config
 })
 
@@ -27,15 +34,20 @@ api.interceptors.response.use(
       const errorData = error.response.data
       
       // Create a standardized error object
+      const status = error.response.status
+      const raw = errorData
+      const message = errorData?.message || errorData?.error || (typeof raw === 'string' ? raw : JSON.stringify(raw || {})) || 'An error occurred'
       const standardError = {
-        status: error.response.status,
-        message: errorData.message || errorData.error || 'An error occurred',
-        timestamp: errorData.timestamp,
-        path: errorData.path
+        status: status,
+        message: message,
+        raw: raw,
+        timestamp: errorData?.timestamp,
+        path: errorData?.path
       }
       
       // Attach the formatted error to the error object
-      error.formattedMessage = standardError.message
+      // Include HTTP status in the formatted message to make it obvious in the UI
+      error.formattedMessage = `${standardError.status}: ${standardError.message}`
       error.errorDetails = standardError
       
       console.error('API Error:', standardError)
