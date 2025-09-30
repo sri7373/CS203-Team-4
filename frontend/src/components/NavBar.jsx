@@ -58,6 +58,13 @@ export default function NavBar() {
               className={linkActive('/query-logs') ? 'active' : ''}
               aria-current={linkActive('/query-logs') ? 'page' : undefined}
             >Query Logs</Link>
+            {user?.role === 'ADMIN' && (
+              <Link
+                to="/admin/tariffs"
+                className={linkActive('/admin/tariffs') ? 'active' : ''}
+                aria-current={linkActive('/admin/tariffs') ? 'page' : undefined}
+              >Admin Console</Link>
+            )}
           </>
         )}
         <div className="right">

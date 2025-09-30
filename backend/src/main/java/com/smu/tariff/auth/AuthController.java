@@ -63,7 +63,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Email is taken");
         }
         Role role = request.role == null ? Role.USER : request.role;
-        User user = new User(request.username, request.email,
+        User user = new User(normalizedUsername, normalizedEmail,
                 passwordEncoder.encode(request.password), role);
         userRepository.save(user);
         String token = jwtService.generateToken(user);
