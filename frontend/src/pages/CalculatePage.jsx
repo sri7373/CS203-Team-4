@@ -555,28 +555,47 @@ export default function CalculatePage() {
                       {formatCurrency(res.additionalFee)}
                     </span>
                   </motion.div>
-                  <motion.div
-  className="small neon-subtle w-full max-w-5xl mx-auto p-8"
-  style={{ marginTop: -12, marginBottom: 24 }}
-  initial={{ opacity: 0, y: 10 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.4 }}
->
-  <div className="text-lg font-semibold mb-4">AI Summary</div>
-  
-  <div
-    className="prose max-w-none text-justify leading-relaxed"
-    dangerouslySetInnerHTML={{ __html: res.aiSummary }}
-  />
-</motion.div>
-
-
                 </div>
+                
+                {/* AI Summary Section */}
+                <motion.div
+                    className="result-panel glow-border"
+                    style={{ textAlign: "center", padding: "20px" }}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    <div
+                      className="label"
+                      style={{ marginBottom: 8, fontSize: "12px" }}
+                    >
+                      AI SUMMARY
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: 500,
+                        lineHeight: 1.6,
+                        color: "rgba(255,255,255,0.85)",
+                        textAlign: "justify",
+                      }}
+                      dangerouslySetInnerHTML={{ __html: res.aiSummary }}
+                    />
+
+                    <div
+                      className="small"
+                      style={{ marginTop: 12, opacity: 0.6, fontSize: "13px" }}
+                    >
+                      Generated automatically based on tariff data
+                    </div>
+                  </motion.div>
+
 
                 {/* Total Cost - Prominent Display */}
                 <motion.div
                   className="result-panel glow-border"
-                  style={{ textAlign: "center", padding: "20px" }}
+                  style={{ textAlign: "center", padding: "20px",marginTop: "24px" }}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.5 }}

@@ -133,21 +133,15 @@ public class TariffService {
         );
 
         String prompt = String.format(
-             "Summarize this tariff calculation clearly in business terms using less than 100 words. " +
-            "Format the response as valid HTML using <p> for paragraphs and <b> for important values or keywords. " +
-            "Also include recent global news or trade policy context related to <b>%s tariffs</b> between <b>%s</b> and <b>%s</b>.\n\n" +
-            "<p><b>Calculation:</b></p>" +
-             "<ul>" +
-            "<li>Declared Value: %s</li>" +
-            "<li>Tariff: %s</li>" +
-            "<li>Fee: %s</li>" +
-            "<li>Total: %s</li>" +
-            "</ul>",
+            "Provide a concise explanation (under 120 words) of the possible reasons for this tariff. " +
+            "Focus on trade policies, agreements, or global news that could affect <b>%s tariffs</b> " +
+            "between <b>%s</b> and <b>%s</b>. " +
+            "Format the response as valid HTML using <p> for paragraphs and <b> for important keywords or values.",
             resp.productCategoryCode,
             resp.originCountryCode,
-            resp.destinationCountryCode,
-            resp.declaredValue, resp.tariffAmount, resp.additionalFee, resp.totalCost
+            resp.destinationCountryCode
         );
+
                 
         try {
             GeminiClient gemini = new GeminiClient(System.getenv("GEMINI_API_KEY"));
