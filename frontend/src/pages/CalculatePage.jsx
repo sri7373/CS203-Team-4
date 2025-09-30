@@ -136,7 +136,7 @@ export default function CalculatePage() {
         err.message?.includes("not found")
       ) {
         isDataUnavailable = true;
-        errorMessage = `No tariff data available for ${origin} 遶翫・${destination} (${category}). This trade route may not be covered in our current database, or no tariff schedule is active for the selected date.`;
+        errorMessage = `No tariff data available for ${origin} → ${destination} (${category}). This trade route may not be covered in our current database, or no tariff schedule is active for the selected date.`;
       } else if (
         err.code === "NETWORK_ERROR" ||
         err.message.includes("Network Error")
