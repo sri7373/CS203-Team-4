@@ -252,7 +252,7 @@ export default function CalculatePage() {
           </div>
           <div className="btn-group" style={{ marginTop: 8 }}>
             <button className="primary" type="submit" disabled={loading}>
-              {loading ? "Calculating遯ｶ・ｦ" : "Calculate"}
+              {loading ? "Calculating…" : "Calculate"}
             </button>
             <button
               type="button"
