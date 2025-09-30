@@ -17,5 +17,4 @@ public class RegisterRequest {
     public String password;
 
     public Role role = Role.USER;
-    public Role role = Role.USER;
 }

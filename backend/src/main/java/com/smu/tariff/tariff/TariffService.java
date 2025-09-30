@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.io.ByteArrayOutputStream;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -44,11 +45,9 @@ public class TariffService {
     private final com.smu.tariff.logging.QueryLogService queryLogService;
 
     public TariffService(TariffRateRepository tariffRateRepository,
-                         CountryRepository countryRepository,
-                         ProductCategoryRepository productCategoryRepository,
-                         QueryLogRepository queryLogRepository,
-                         UserRepository userRepository,
-                         com.smu.tariff.logging.QueryLogService queryLogService) {
+            CountryRepository countryRepository,
+            ProductCategoryRepository productCategoryRepository,
+            QueryLogRepository queryLogRepository) {
         this.tariffRateRepository = tariffRateRepository;
         this.countryRepository = countryRepository;
         this.productCategoryRepository = productCategoryRepository;
@@ -71,6 +70,7 @@ public class TariffService {
         }
 
         LocalDate date = (req.date == null || req.date.isBlank()) ? LocalDate.now() : LocalDate.parse(req.date);
+
         
         // Fetch entities, throw error if not found
         Country origin = countryRepository.findByCode(req.originCountryCode.toUpperCase())
@@ -173,23 +173,7 @@ public class TariffService {
             return dto;
         }).collect(java.util.stream.Collectors.toList());
 
-        java.util.Map<String, Object> resultSummary = new java.util.HashMap<>();
-        resultSummary.put("count", dtos.size());
-        java.util.List<Long> sampleIds = dtos.stream()
-                .map(dto -> dto.id)
-                .filter(id -> id != null)
-                .limit(3)
-                .collect(java.util.stream.Collectors.toList());
-        if (!sampleIds.isEmpty()) {
-            resultSummary.put("sampleIds", sampleIds);
-        }
-        queryLogService.log(
-            "SEARCH",
-            String.format("{origin:%s,dest:%s,cat:%s}", originCode, destCode, catCode),
-            resultSummary,
-            originCode,
-            destCode
-        );
+        logQuery("SEARCH", "{origin:%s,dest:%s,cat:%s}".formatted(originCode, destCode, catCode));
         return dtos;
     }
 
@@ -281,6 +265,58 @@ public class TariffService {
     public void deleteTariff(Long id) {
         if (!tariffRateRepository.existsById(id)) {
             throw new TariffNotFoundException("Tariff with id " + id + " not found");
+        }
+        tariffRateRepository.deleteById(id);
+        logQuery("DELETE", "id=" + id);
+    }
+
+    // ^CRUD satisfied
+
+    public byte[] generatePdfReport(TariffCalcResponse resp) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        Document document = new Document();
+        try {
+            PdfWriter.getInstance(document, out);
+            document.open();
+
+            // Title
+            document.add(new Paragraph("Tariff Calculation Report", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16)));
+            document.add(new Paragraph("Generated on: " + LocalDate.now()));
+            document.add(new Paragraph(" "));
+
+            // Input details
+            document.add(new Paragraph("Origin Country: " + resp.originCountryCode));
+            document.add(new Paragraph("Destination Country: " + resp.destinationCountryCode));
+            document.add(new Paragraph("Product Category: " + resp.productCategoryCode));
+            document.add(new Paragraph("Effective Date: " + resp.effectiveDate));
+            document.add(new Paragraph("Declared Value: " + resp.declaredValue));
+            document.add(new Paragraph(" "));
+
+            // Calculation details in table
+            PdfPTable table = new PdfPTable(2);
+            table.setWidthPercentage(100);
+
+            table.addCell("Base Rate");
+            table.addCell(resp.baseRate.toPlainString());
+
+            table.addCell("Tariff Amount");
+            table.addCell(resp.tariffAmount.toPlainString());
+
+            table.addCell("Additional Fee");
+            table.addCell(resp.additionalFee.toPlainString());
+
+            table.addCell("Total Cost");
+            table.addCell(resp.totalCost.toPlainString());
+
+            document.add(table);
+
+            // Notes
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph("Notes: " + resp.notes));
+
+            document.close();
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating PDF", e);
         }
         tariffRateRepository.deleteById(id);
         logQuery("DELETE", "id=" + id);
