@@ -28,7 +28,7 @@ public class User implements UserDetails {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private Role role = Role.ANALYST;
+    private Role role = Role.USER;
 
     @Column(nullable = false)
     private Instant createdAt = Instant.now();

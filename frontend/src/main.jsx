@@ -10,6 +10,7 @@ import RatesPage from './pages/RatesPage.jsx'
 import InsightsPage from './pages/InsightsPage.jsx'
 import HomePage from './pages/HomePage.jsx'
 import ProtectedRoute from './routes/ProtectedRoute.jsx'
+import QueryLogsPage from './pages/QueryLogsPage.jsx'
 
 const root = createRoot(document.getElementById('root'))
 root.render(
@@ -41,6 +42,14 @@ root.render(
             element={
               <ProtectedRoute>
                 <InsightsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/query-logs"
+            element={
+              <ProtectedRoute>
+                <QueryLogsPage />
               </ProtectedRoute>
             }
           />

@@ -6,6 +6,7 @@ import com.smu.tariff.user.User;
 import com.smu.tariff.user.UserRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -40,14 +41,24 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
-        if (userRepository.existsByUsername(request.username)) {
-            return ResponseEntity.badRequest().body("Username is taken");
+        String normalizedUsername = request.username.trim();
+        String normalizedEmail = request.email.trim().toLowerCase();
+
+        if (normalizedUsername.isEmpty()) {
+            return ResponseEntity.badRequest().body("Username cannot be blank");
         }
-        if (userRepository.existsByEmail(request.email)) {
-            return ResponseEntity.badRequest().body("Email is taken");
+        if (normalizedEmail.isEmpty()) {
+            return ResponseEntity.badRequest().body("Email cannot be blank");
         }
-        Role role = request.role == null ? Role.ANALYST : request.role;
-        User user = new User(request.username, request.email,
+
+        if (userRepository.existsByUsername(normalizedUsername)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Username is taken");
+        }
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Email is taken");
+        }
+        Role role = request.role == null ? Role.USER : request.role;
+        User user = new User(normalizedUsername, normalizedEmail,
                 passwordEncoder.encode(request.password), role);
         userRepository.save(user);
         String token = jwtService.generateToken(user);

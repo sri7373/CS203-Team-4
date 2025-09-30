@@ -53,6 +53,11 @@ export default function NavBar() {
               className={linkActive('/insights') ? 'active' : ''}
               aria-current={linkActive('/insights') ? 'page' : undefined}
             >Insights</Link>
+            <Link
+              to="/query-logs"
+              className={linkActive('/query-logs') ? 'active' : ''}
+              aria-current={linkActive('/query-logs') ? 'page' : undefined}
+            >Query Logs</Link>
           </>
         )}
         <div className="right">

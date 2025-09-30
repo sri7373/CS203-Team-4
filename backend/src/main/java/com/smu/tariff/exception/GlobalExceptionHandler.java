@@ -10,9 +10,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.security.core.AuthenticationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -73,6 +75,33 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, WebRequest request) {
+        String causeMessage = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
+        logger.warn("Data integrity violation: {}", causeMessage);
+
+        String userMessage = "Request violates a data integrity constraint.";
+        if (causeMessage != null) {
+            if (causeMessage.contains("users_username_key")) {
+                userMessage = "Username is already taken.";
+            } else if (causeMessage.contains("users_email_key")) {
+                userMessage = "Email is already taken.";
+            } else if (causeMessage.toLowerCase().contains("duplicate")) {
+                userMessage = "Duplicate value detected for a unique field.";
+            }
+        }
+
+        ErrorResponse error = new ErrorResponse(
+            Instant.now(),
+            HttpStatus.CONFLICT.value(),
+            "Conflict",
+            userMessage,
+            request.getDescription(false).replace("uri=", "")
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex, WebRequest request) {
         logger.warn("Illegal argument: {}", ex.getMessage());
@@ -86,6 +115,21 @@ public class GlobalExceptionHandler {
         );
         
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex, WebRequest request) {
+        logger.warn("Authentication failed: {}", ex.getMessage());
+
+        ErrorResponse error = new ErrorResponse(
+            Instant.now(),
+            HttpStatus.UNAUTHORIZED.value(),
+            "Unauthorized",
+            "Invalid username or password",
+            request.getDescription(false).replace("uri=", "")
+        );
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
     @ExceptionHandler(RuntimeException.class)
@@ -118,3 +162,4 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 }
+

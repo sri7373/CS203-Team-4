@@ -6,6 +6,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.io.ByteArrayOutputStream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,12 +18,15 @@ import com.smu.tariff.exception.InvalidTariffRequestException;
 import com.smu.tariff.exception.TariffNotFoundException;
 import com.smu.tariff.logging.QueryLog;
 import com.smu.tariff.logging.QueryLogRepository;
+import com.smu.tariff.logging.QueryLogService;
 import com.smu.tariff.product.ProductCategory;
 import com.smu.tariff.product.ProductCategoryRepository;
 import com.smu.tariff.tariff.dto.TariffCalcRequest;
 import com.smu.tariff.tariff.dto.TariffCalcResponse;
 import com.smu.tariff.tariff.dto.TariffRateDto;
 import com.smu.tariff.user.User;
+import com.smu.tariff.user.UserRepository;
+import org.springframework.security.core.userdetails.UserDetails;
 import com.smu.tariff.ai.GeminiClient;
 
 import com.lowagie.text.*;
@@ -31,19 +36,23 @@ import com.lowagie.text.pdf.*;
 @Transactional
 public class TariffService {
 
+    private static final Logger logger = LoggerFactory.getLogger(TariffService.class);
+
     private final TariffRateRepository tariffRateRepository;
     private final CountryRepository countryRepository;
     private final ProductCategoryRepository productCategoryRepository;
-    private final QueryLogRepository queryLogRepository;
+    private final com.smu.tariff.logging.QueryLogService queryLogService;
 
     public TariffService(TariffRateRepository tariffRateRepository,
                          CountryRepository countryRepository,
                          ProductCategoryRepository productCategoryRepository,
-                         QueryLogRepository queryLogRepository) {
+                         QueryLogRepository queryLogRepository,
+                         UserRepository userRepository,
+                         com.smu.tariff.logging.QueryLogService queryLogService) {
         this.tariffRateRepository = tariffRateRepository;
         this.countryRepository = countryRepository;
         this.productCategoryRepository = productCategoryRepository;
-        this.queryLogRepository = queryLogRepository;
+        this.queryLogService = queryLogService;
     }
 
     public TariffCalcResponse calculate(TariffCalcRequest req) {
@@ -79,9 +88,25 @@ public class TariffService {
         }
         TariffRate rate = rates.get(0); // latest effective rate
 
+        // If the selected rate has zero baseRate and zero additionalFee, try to find a fallback
+        if ((rate.getBaseRate() == null || rate.getBaseRate().compareTo(java.math.BigDecimal.ZERO) == 0)
+                && (rate.getAdditionalFee() == null || rate.getAdditionalFee().compareTo(java.math.BigDecimal.ZERO) == 0)) {
+            // Attempt to find a recent non-zero rate for the same category
+            java.util.Optional<TariffRate> fallback = tariffRateRepository.findFirstByProductCategoryAndBaseRateGreaterThanOrderByEffectiveFromDesc(cat, java.math.BigDecimal.ZERO);
+            if (fallback.isPresent()) {
+                rate = fallback.get();
+            }
+        }
+
         BigDecimal declared = BigDecimal.valueOf(req.declaredValue).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal tariffAmount = declared.multiply(rate.getBaseRate()).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal total = declared.add(tariffAmount).add(rate.getAdditionalFee()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal baseRate = (rate.getBaseRate() == null) ? BigDecimal.ZERO : rate.getBaseRate();
+        BigDecimal additionalFee = (rate.getAdditionalFee() == null) ? BigDecimal.ZERO : rate.getAdditionalFee();
+
+        // Compute tariff as: declared + (declared * baseRate) + additionalFee
+        BigDecimal tariffAmount = declared.multiply(baseRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal total = declared.add(tariffAmount).add(additionalFee).setScale(2, RoundingMode.HALF_UP);
+
+        logger.info("Selected rate id={} baseRate={} additionalFee={}", rate.getId(), baseRate, additionalFee);
 
         // Prepare response
         TariffCalcResponse resp = new TariffCalcResponse();
@@ -97,9 +122,15 @@ public class TariffService {
         resp.notes = "Total = declaredValue + (declaredValue * baseRate) + additionalFee";
         resp.aiSummary = null; // to be filled later
 
-        // Log the query
-        logQuery("CALCULATE", String.format("{origin:%s,dest:%s,cat:%s,val:%s,date:%s}",
-                resp.originCountryCode, resp.destinationCountryCode, resp.productCategoryCode, declared, date));
+        // Log the query (attach authenticated user if present)
+        queryLogService.log(
+            "CALCULATE",
+            String.format("{origin:%s,dest:%s,cat:%s,val:%s,date:%s}",
+                resp.originCountryCode, resp.destinationCountryCode, resp.productCategoryCode, declared, date),
+            resp,
+            resp.originCountryCode,
+            resp.destinationCountryCode
+        );
 
         String prompt = String.format(
              "Summarize this tariff calculation clearly in business terms using less than 100 words. " +
@@ -167,15 +198,27 @@ public class TariffService {
             return dto;
         }).collect(java.util.stream.Collectors.toList());
 
-        logQuery("SEARCH", String.format("{origin:%s,dest:%s,cat:%s}", originCode, destCode, catCode));
+        java.util.Map<String, Object> resultSummary = new java.util.HashMap<>();
+        resultSummary.put("count", dtos.size());
+        java.util.List<Long> sampleIds = dtos.stream()
+                .map(dto -> dto.id)
+                .filter(id -> id != null)
+                .limit(3)
+                .collect(java.util.stream.Collectors.toList());
+        if (!sampleIds.isEmpty()) {
+            resultSummary.put("sampleIds", sampleIds);
+        }
+        queryLogService.log(
+            "SEARCH",
+            String.format("{origin:%s,dest:%s,cat:%s}", originCode, destCode, catCode),
+            resultSummary,
+            originCode,
+            destCode
+        );
         return dtos;
     }
 
-    private void logQuery(String type, String params) {
-        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User user = (auth != null && auth.getPrincipal() instanceof User) ? (User) auth.getPrincipal() : null;
-        queryLogRepository.save(new QueryLog(user, type, params));
-    }
+    // ... moved logging responsibility to QueryLogService
 
     public byte[] generatePdfReport(TariffCalcResponse resp) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -227,3 +270,4 @@ public class TariffService {
         return out.toByteArray();
     }
 }
+
