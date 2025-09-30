@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smu.tariff.security.JwtService;
 import com.smu.tariff.user.User;
 import com.smu.tariff.user.UserRepository;
@@ -17,6 +18,9 @@ import jakarta.servlet.http.HttpServletRequest;
 @Service
 @Transactional
 public class QueryLogService {
+
+    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final int MAX_RESULT_LENGTH = 4096;
 
     private final QueryLogRepository queryLogRepository;
     private final UserRepository userRepository;
@@ -34,11 +38,23 @@ public class QueryLogService {
      * Save a query log and attach the currently authenticated user if available.
      */
     public void log(String type, String params) {
-        User user = getCurrentUser();
+        log(type, params, null, null, null);
+    }
 
+    public void log(String type, String params, Object result) {
+        log(type, params, result, null, null);
+    }
+
+    public void log(String type, String params, Object result, String originCountry, String destinationCountry) {
+        User user = getCurrentUser();
+        String serializedResult = serializeResult(result);
         String resolvedUser = (user != null) ? user.getUsername() : "<anonymous>";
+
+        String origin = originCountry != null ? originCountry : extractFromParams(params, "origin", "from");
+        String destination = destinationCountry != null ? destinationCountry : extractFromParams(params, "destination", "to");
+
         System.out.println("QueryLogService: saving log for user=" + resolvedUser);
-        queryLogRepository.save(new QueryLog(user, type, params));
+        queryLogRepository.save(new QueryLog(user, type, params, serializedResult, origin, destination));
     }
 
     public User getCurrentUser() {
@@ -94,6 +110,42 @@ public class QueryLogService {
             }
         } catch (Exception ex) {
             System.err.println("QueryLogService: failed to resolve user from token - " + ex.getMessage());
+        }
+        return null;
+    }
+
+    private String serializeResult(Object result) {
+        if (result == null) {
+            return null;
+        }
+        try {
+            String json = (result instanceof String) ? (String) result : mapper.writeValueAsString(result);
+            if (json.length() > MAX_RESULT_LENGTH) {
+                return json.substring(0, MAX_RESULT_LENGTH - 1) + "…";
+            }
+            return json;
+        } catch (Exception ex) {
+            String fallback = String.valueOf(result);
+            if (fallback.length() > MAX_RESULT_LENGTH) {
+                return fallback.substring(0, MAX_RESULT_LENGTH - 1) + "…";
+            }
+            return fallback;
+        }
+    }
+
+    private String extractFromParams(String params, String primaryKey, String fallbackKey) {
+        if (params == null || params.isBlank()) {
+            return null;
+        }
+        try {
+            var parsed = QueryLogParamParser.parse(params);
+            if (parsed.containsKey(primaryKey)) {
+                return parsed.get(primaryKey);
+            }
+            if (parsed.containsKey(fallbackKey)) {
+                return parsed.get(fallbackKey);
+            }
+        } catch (Exception ignore) {
         }
         return null;
     }

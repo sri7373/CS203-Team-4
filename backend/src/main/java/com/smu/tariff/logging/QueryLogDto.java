@@ -8,6 +8,8 @@ public class QueryLogDto {
     // Raw DB fields
     private String type;
     private String rawParams;
+    private String rawResult;
+    private String resultPreview;
 
     // User info
     private Long userId;
@@ -50,6 +52,12 @@ public class QueryLogDto {
 
     public String getRawParams() { return rawParams; }
     public void setRawParams(String rawParams) { this.rawParams = rawParams; }
+
+    public String getRawResult() { return rawResult; }
+    public void setRawResult(String rawResult) { this.rawResult = rawResult; }
+
+    public String getResultPreview() { return resultPreview; }
+    public void setResultPreview(String resultPreview) { this.resultPreview = resultPreview; }
 
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }

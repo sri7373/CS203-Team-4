@@ -116,9 +116,15 @@ public class TariffService {
         resp.totalCost = total;
         resp.notes = "Total = declaredValue + (declaredValue * baseRate) + additionalFee";
 
-    // Log the query (attach authenticated user if present)
-    queryLogService.log("CALCULATE", String.format("{origin:%s,dest:%s,cat:%s,val:%s,date:%s}",
-        resp.originCountryCode, resp.destinationCountryCode, resp.productCategoryCode, declared, date));
+        // Log the query (attach authenticated user if present)
+        queryLogService.log(
+            "CALCULATE",
+            String.format("{origin:%s,dest:%s,cat:%s,val:%s,date:%s}",
+                resp.originCountryCode, resp.destinationCountryCode, resp.productCategoryCode, declared, date),
+            resp,
+            resp.originCountryCode,
+            resp.destinationCountryCode
+        );
 
         return resp;
     }
@@ -158,7 +164,23 @@ public class TariffService {
             return dto;
         }).collect(java.util.stream.Collectors.toList());
 
-    queryLogService.log("SEARCH", String.format("{origin:%s,dest:%s,cat:%s}", originCode, destCode, catCode));
+        java.util.Map<String, Object> resultSummary = new java.util.HashMap<>();
+        resultSummary.put("count", dtos.size());
+        java.util.List<Long> sampleIds = dtos.stream()
+                .map(dto -> dto.id)
+                .filter(id -> id != null)
+                .limit(3)
+                .collect(java.util.stream.Collectors.toList());
+        if (!sampleIds.isEmpty()) {
+            resultSummary.put("sampleIds", sampleIds);
+        }
+        queryLogService.log(
+            "SEARCH",
+            String.format("{origin:%s,dest:%s,cat:%s}", originCode, destCode, catCode),
+            resultSummary,
+            originCode,
+            destCode
+        );
         return dtos;
     }
 
@@ -214,3 +236,4 @@ public class TariffService {
         return out.toByteArray();
     }
 }
+

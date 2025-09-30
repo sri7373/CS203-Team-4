@@ -179,6 +179,13 @@ public class QueryLogController {
         dto.setTimestamp(log.getCreatedAt() == null ? null : log.getCreatedAt().toString());
         dto.setType(log.getType());
         dto.setRawParams(log.getParams());
+        dto.setRawResult(log.getResult());
+        try {
+            dto.setResultPreview(summarize(log.getResult()));
+        } catch (Exception ex) {
+            dto.setResultPreview("-");
+            System.err.println("QueryLogController: summarize failed for log " + log.getId() + " - " + ex.getMessage());
+        }
 
         if (log.getUser() != null) {
             dto.setUserId(log.getUser().getId());
@@ -201,8 +208,10 @@ public class QueryLogController {
         dto.setAction(log.getType());
 
         Map<String, String> parsed = QueryLogParamParser.parse(log.getParams());
-        dto.setOrigin(parsed.getOrDefault("origin", parsed.getOrDefault("from", "-")));
-        dto.setDestination(parsed.getOrDefault("destination", parsed.getOrDefault("to", "-")));
+        String origin = parsed.getOrDefault("origin", parsed.getOrDefault("from", log.getOriginCountry() != null ? log.getOriginCountry() : "-"));
+        String destination = parsed.getOrDefault("destination", parsed.getOrDefault("to", log.getDestinationCountry() != null ? log.getDestinationCountry() : "-"));
+        dto.setOrigin(origin);
+        dto.setDestination(destination);
         dto.setCategory(parsed.getOrDefault("category", parsed.getOrDefault("cat", "-")));
         dto.setValue(parsed.getOrDefault("value", parsed.getOrDefault("val", "-")));
         dto.setDate(parsed.getOrDefault("date", "-"));
@@ -212,6 +221,8 @@ public class QueryLogController {
         map.put("createdAt", dto.getTimestamp());
         map.put("type", dto.getType());
         map.put("params", log.getParams());
+        map.put("result", dto.getRawResult());
+        map.put("resultPreview", dto.getResultPreview());
 
         map.put("userId", dto.getUserId());
         map.put("username", dto.getUser());
@@ -228,4 +239,16 @@ public class QueryLogController {
 
         return map;
     }
+
+    private String summarize(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "-";
+        }
+        String trimmed = raw.trim();
+        if (trimmed.length() <= 120) {
+            return trimmed;
+        }
+        return trimmed.substring(0, 117) + "...";
+    }
 }
+
