@@ -14,11 +14,13 @@ api.interceptors.request.use((config) => {
     config.headers['Authorization'] = `Bearer ${token}`
   }
   // Debug: log whether Authorization header is present (helps trace why protected endpoints return 401)
-  try {
-    // Use console.debug so it is easy to spot in DevTools network/console
-    console.debug('API Request:', config.method?.toUpperCase(), config.url, 'Auth:', !!config.headers['Authorization'])
-  } catch (e) {
-    // ignore logging errors
+  if (import.meta.env.DEV) {
+    try {
+      // Use console.debug so it is easy to spot in DevTools network/console
+      console.debug('API Request:', config.method?.toUpperCase(), config.url, 'Auth:', !!config.headers['Authorization'])
+    } catch (e) {
+      // ignore logging errors
+    }
   }
   return config
 })
