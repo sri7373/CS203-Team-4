@@ -1,58 +1,79 @@
 package com.smu.tariff.ai;
 
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.http.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-
+@Component
 public class GeminiClient {
 
-    @Value("${gemini.api.key}")
-    private String apiKey;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private static final String MODEL_NAME = "gemini-2.5-flash";
+    private static final String GENERATE_CONTENT_URL = "https://generativelanguage.googleapis.com/v1/models/%s:generateContent?key=%s";
 
-    public GeminiClient(@Value("${gemini.api.key}") String apiKey) {
+    private final String apiKey;
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
+
+    public GeminiClient(
+            @Value("${gemini.api.key:}") String apiKey,
+            RestTemplateBuilder restTemplateBuilder,
+            ObjectMapper objectMapper) {
         this.apiKey = apiKey;
-    }    
+        this.restTemplate = restTemplateBuilder
+                .setConnectTimeout(Duration.ofSeconds(10))
+                .setReadTimeout(Duration.ofSeconds(30))
+                .build();
+        this.objectMapper = objectMapper;
+    }
 
     public String generateSummary(String prompt) {
-        String url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" + apiKey;
-
-        String requestJson = String.format(
-            "{ \"contents\": [{ \"parts\": [{ \"text\": \"%s\" }] }] }",
-            prompt.replace("\"", "\\\"") // escape quotes
-        );
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> entity = new HttpEntity<>(requestJson, headers);
-
-        ResponseEntity<String> response = restTemplate.exchange(
-            url,
-            HttpMethod.POST,
-            entity,
-            String.class
-        );
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("Gemini API key is not configured");
+        }
 
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root = mapper.readTree(response.getBody());
+            String url = String.format(GENERATE_CONTENT_URL, MODEL_NAME, apiKey);
+            String requestBody = objectMapper.writeValueAsString(
+                    Map.of("contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))))
+            );
 
-            // Drill down: candidates[0].content.parts[0].text
-            return root.path("candidates").get(0)
-                       .path("content")
-                       .path("parts").get(0)
-                       .path("text").asText();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "AI summary generation failed";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new IllegalStateException("Gemini API request failed with status " + response.getStatusCode());
+            }
+
+            JsonNode textNode = objectMapper.readTree(response.getBody())
+                    .path("candidates")
+                    .path(0)
+                    .path("content")
+                    .path("parts")
+                    .path(0)
+                    .path("text");
+
+            if (textNode.isMissingNode() || textNode.isNull()) {
+                throw new IllegalStateException("Gemini API response did not contain summary text");
+            }
+
+            return textNode.asText();
+        } catch (Exception ex) {
+            throw new IllegalStateException("Failed to generate Gemini summary", ex);
         }
     }
 }

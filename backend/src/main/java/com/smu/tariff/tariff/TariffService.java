@@ -42,17 +42,20 @@ public class TariffService {
     private final CountryRepository countryRepository;
     private final ProductCategoryRepository productCategoryRepository;
     private final com.smu.tariff.logging.QueryLogService queryLogService;
+    private final GeminiClient geminiClient;
 
     public TariffService(TariffRateRepository tariffRateRepository,
                          CountryRepository countryRepository,
                          ProductCategoryRepository productCategoryRepository,
                          QueryLogRepository queryLogRepository,
                          UserRepository userRepository,
-                         com.smu.tariff.logging.QueryLogService queryLogService) {
+                         com.smu.tariff.logging.QueryLogService queryLogService,
+                         GeminiClient geminiClient) {
         this.tariffRateRepository = tariffRateRepository;
         this.countryRepository = countryRepository;
         this.productCategoryRepository = productCategoryRepository;
         this.queryLogService = queryLogService;
+        this.geminiClient = geminiClient;
     }
 
     public TariffCalcResponse calculate(TariffCalcRequest req) {
@@ -115,9 +118,9 @@ public class TariffService {
         resp.productCategoryCode = cat.getCode();
         resp.effectiveDate = date.toString();
         resp.declaredValue = declared;
-        resp.baseRate = rate.getBaseRate();
+        resp.baseRate = baseRate;
         resp.tariffAmount = tariffAmount;
-        resp.additionalFee = rate.getAdditionalFee();
+        resp.additionalFee = additionalFee;
         resp.totalCost = total;
         resp.notes = "Total = declaredValue + (declaredValue * baseRate) + additionalFee";
         resp.aiSummary = null; // to be filled later
@@ -132,29 +135,77 @@ public class TariffService {
             resp.destinationCountryCode
         );
 
-        String prompt = String.format(
-            "Provide a concise explanation (under 120 words) of the possible reasons for this tariff. " +
-            "Focus on trade policies, agreements, or global news that could affect <b>%s tariffs</b> " +
-            "between <b>%s</b> and <b>%s</b>. " +
-            "Format the response as valid HTML using <p> for paragraphs and <b> for important keywords or values.",
-            resp.productCategoryCode,
-            resp.originCountryCode,
-            resp.destinationCountryCode
-        );
+        String prompt = buildAiPrompt(resp);
 
-                
+
         try {
-            GeminiClient gemini = new GeminiClient(System.getenv("GEMINI_API_KEY"));
-            String aiText = gemini.generateSummary(prompt);  // already parsed text
-            resp.aiSummary = aiText;
+            String aiSummary = geminiClient.generateSummary(prompt);
+            resp.aiSummary = normalizeAiSummary(aiSummary);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.warn("Failed to generate AI summary", e);
             resp.aiSummary = "AI summary unavailable.";
         }
-// resp.aiSummary = "AI summary unavailable."; // Temporarily disable AI feature
 
 
         return resp;
+    }
+
+
+
+    private String normalizeAiSummary(String raw) {
+        if (raw == null) {
+            return null;
+        }
+
+        String content = raw.trim();
+        if (content.isEmpty()) {
+            return "";
+        }
+
+        content = content.replace("\r\n", "\n");
+        content = content.replaceAll("\\*\\*(.+?)\\*\\*", "<b>$1</b>");
+
+        if (content.toLowerCase().contains("<p")) {
+            return content;
+        }
+
+        String[] paragraphs = content.split("\n{2,}");
+        return java.util.Arrays.stream(paragraphs)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(p -> p.replace("\n", " "))
+                .map(p -> p.replaceAll("\\s+", " "))
+                .map(p -> "<p>" + p.trim() + "</p>")
+                .collect(java.util.stream.Collectors.joining());
+    }
+
+    private String buildAiPrompt(TariffCalcResponse resp) {
+        return String.format("""
+            You are an international trade analyst. In fewer than 120 words, explain why the following tariff structure could be in place.
+
+            Tariff inputs:
+            - Origin country: %s
+            - Destination country: %s
+            - Product category: %s
+            - Effective date: %s
+            - Declared value (USD): %s
+            - Base rate: %s
+            - Calculated tariff amount: %s
+            - Additional fee: %s
+            - Total landed cost: %s
+
+            Focus on likely trade policies, agreements, or market dynamics that would justify the base rate and additional fee. Provide one actionable insight importers can use to manage this tariff exposure. Respond only with HTML consisting of exactly two <p> elements and use <b> tags for emphasis. Do not use Markdown.
+            """,
+            resp.originCountryCode,
+            resp.destinationCountryCode,
+            resp.productCategoryCode,
+            resp.effectiveDate,
+            resp.declaredValue.toPlainString(),
+            resp.baseRate.toPlainString(),
+            resp.tariffAmount.toPlainString(),
+            resp.additionalFee.toPlainString(),
+            resp.totalCost.toPlainString()
+        );
     }
 
     public List<TariffRateDto> search(String originCode, String destCode, String catCode) {

@@ -17,6 +17,7 @@ export default function CalculatePage() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
   const formatCurrency = (v) =>
@@ -90,6 +91,7 @@ export default function CalculatePage() {
         errorMessage = err.message || "PDF generation failed";
       }
 
+      setAiSummaryLoading(false);
       setError({ message: errorMessage, isDataUnavailable });
     } finally {
       if (timeoutId) {
@@ -103,6 +105,7 @@ export default function CalculatePage() {
     e.preventDefault();
     setError(null);
     setRes(null);
+    setAiSummaryLoading(true);
     setLoading(true);
 
     try {
@@ -121,6 +124,7 @@ export default function CalculatePage() {
 
       const r = await api.post("/api/tariffs/calculate", payload);
       setRes(r.data);
+      setAiSummaryLoading(false);
       setRetryCount(0); // Reset retry count on success
     } catch (err) {
       console.error("Calculation error:", err);
@@ -136,7 +140,7 @@ export default function CalculatePage() {
         err.message?.includes("not found")
       ) {
         isDataUnavailable = true;
-        errorMessage = `No tariff data available for ${origin} → ${destination} (${category}). This trade route may not be covered in our current database, or no tariff schedule is active for the selected date.`;
+        errorMessage = `No tariff data available for ${origin} -> ${destination} (${category}). This trade route may not be covered in our current database, or no tariff schedule is active for the selected date.`;
       } else if (
         err.code === "NETWORK_ERROR" ||
         err.message.includes("Network Error")
@@ -160,9 +164,11 @@ export default function CalculatePage() {
           "Calculation failed. Please try again.";
       }
 
+      setAiSummaryLoading(false);
       setError({ message: errorMessage, isDataUnavailable });
     } finally {
       setLoading(false);
+      setAiSummaryLoading(false);
     }
   };
 
@@ -252,10 +258,9 @@ export default function CalculatePage() {
           </div>
           <div className="btn-group" style={{ marginTop: 8 }}>
             <button className="primary" type="submit" disabled={loading}>
-              {loading ? "Calculating…" : "Calculate"}
+              {loading ? "Calculating..." : "Calculate"}
             </button>
             <button
-              type="button"
               onClick={() => {
                 setRes(null);
                 setError(null);
@@ -559,34 +564,40 @@ export default function CalculatePage() {
                 
                 {/* AI Summary Section */}
                 <motion.div
-                    className="result-panel glow-border"
-                    style={{ textAlign: "center", padding: "20px" }}
+                    className="result-panel glow-border ai-summary-panel"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.5 }}
                   >
                     <div
                       className="label"
-                      style={{ marginBottom: 8, fontSize: "12px" }}
+                      style={{ marginBottom: 8, fontSize: "12px", textAlign: "center" }}
                     >
                       AI SUMMARY
                     </div>
 
                     <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 500,
-                        lineHeight: 1.6,
-                        color: "rgba(255,255,255,0.85)",
-                        textAlign: "justify",
-                      }}
-                      dangerouslySetInnerHTML={{ __html: res.aiSummary }}
-                    />
-
-                    <div
-                      className="small"
-                      style={{ marginTop: 12, opacity: 0.6, fontSize: "13px" }}
+                      className="ai-summary-body"
+                      role="status"
+                      aria-live="polite"
+                      aria-busy={aiSummaryLoading}
                     >
+                      {aiSummaryLoading ? (
+                        <div className="ai-summary-loading">
+                          <div className="spinner-small" aria-hidden="true" />
+                          <span>Generating AI summary...</span>
+                        </div>
+                      ) : res && res.aiSummary ? (
+                        <div
+                          className="ai-summary-content"
+                          dangerouslySetInnerHTML={{ __html: res.aiSummary }}
+                        />
+                      ) : (
+                        <div className="ai-summary-empty">AI summary unavailable.</div>
+                      )}
+                    </div>
+
+                    <div className="small ai-summary-footnote">
                       Generated automatically based on tariff data
                     </div>
                   </motion.div>
@@ -619,7 +630,7 @@ export default function CalculatePage() {
                     {formatCurrency(res.totalCost)}
                   </div>
                   <div className="small" style={{ marginTop: 8, opacity: 0.7 }}>
-                    Total = declaredValue + (declaredValue × baseRate) +
+                    Total = declaredValue + (declaredValue * baseRate) +
                     additionalFee
                   </div>
                 </motion.div>
@@ -655,3 +666,9 @@ export default function CalculatePage() {
     </MotionWrapper>
   );
 }
+
+
+
+
+
+

@@ -33,5 +33,5 @@ app:
     expirationMs: 86400000 # 1 day
 gemini:
   api:
-    key: ${AIzaSyCxgqgrYbMCQs9178XiPkabKLKkMGi9q-g}
+    key: AIzaSyCxgqgrYbMCQs9178XiPkabKLKkMGi9q-g
 # Swagger UI path: http://localhost:8080/swagger-ui/index.html
