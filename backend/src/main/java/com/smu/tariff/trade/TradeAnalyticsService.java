@@ -1,5 +1,8 @@
 package com.smu.tariff.trade;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashMap;
@@ -24,6 +27,7 @@ import com.smu.tariff.trade.dto.ProductMetricDto;
 @Transactional(readOnly = true)
 public class TradeAnalyticsService {
 
+    private static final Logger logger = LoggerFactory.getLogger(TradeAnalyticsService.class);
     private static final int MAX_ITEMS = 5;
 
     private final CountryRepository countryRepository;
@@ -44,7 +48,7 @@ public class TradeAnalyticsService {
         Country country = countryRepository.findByCode(normalizedCountryCode)
                 .orElseThrow(() -> new InvalidTariffRequestException("Unknown country code: " + countryCode));
 
-        System.out.println("Generating trade insights from existing tariff data for country: " + normalizedCountryCode);
+        logger.info("Generating trade insights for country={}", normalizedCountryCode);
 
         CountryTradeInsightsDto dto = new CountryTradeInsightsDto();
         dto.countryCode = country.getCode();
@@ -54,19 +58,20 @@ public class TradeAnalyticsService {
         List<TariffRate> importTariffs = tariffRateRepository.search(null, country, null);  // Tariffs TO this country
         List<TariffRate> exportTariffs = tariffRateRepository.search(country, null, null);  // Tariffs FROM this country
 
-        System.out.println("Found " + importTariffs.size() + " import tariff rates for " + normalizedCountryCode);
-        System.out.println("Found " + exportTariffs.size() + " export tariff rates for " + normalizedCountryCode);
+        logger.debug("Found {} import tariff rates for {}", importTariffs.size(), normalizedCountryCode);
+        logger.debug("Found {} export tariff rates for {}", exportTariffs.size(), normalizedCountryCode);
         
         // Log sample data to debug null values
         if (!importTariffs.isEmpty()) {
             TariffRate sample = importTariffs.get(0);
-            System.out.println("Sample import tariff: ID=" + sample.getId() + 
-                               ", origin=" + sample.getOrigin().getCode() + 
-                               ", destination=" + sample.getDestination().getCode() + 
-                               ", baseRate=" + sample.getBaseRate() + 
-                               ", additionalFee=" + sample.getAdditionalFee() + 
-                               ", product=" + sample.getProductCategory().getName() + 
-                               " (code=" + sample.getProductCategory().getCode() + ")");
+            logger.debug("Sample import tariff: id={}, origin={}, destination={}, baseRate={}, additionalFee={}, product={} ({})",
+                    sample.getId(),
+                    sample.getOrigin().getCode(),
+                    sample.getDestination().getCode(),
+                    sample.getBaseRate(),
+                    sample.getAdditionalFee(),
+                    sample.getProductCategory().getName(),
+                    sample.getProductCategory().getCode());
         }
 
         // Generate top import categories (highest tariff rates TO this country)
@@ -82,9 +87,9 @@ public class TradeAnalyticsService {
         dto.averageImportTariff = computeAverageTariff(importTariffs);
         dto.averageExportTariff = computeAverageTariff(exportTariffs);
         
-        System.out.println("Average import tariff: " + dto.averageImportTariff);
-        System.out.println("Average export tariff: " + dto.averageExportTariff);
-        System.out.println("Trade insights generation completed for: " + normalizedCountryCode);
+        logger.info("Average import tariff={}", dto.averageImportTariff);
+        logger.info("Average export tariff={}", dto.averageExportTariff);
+        logger.info("Trade insights generation completed for country={}", normalizedCountryCode);
 
         return dto;
     }
@@ -100,20 +105,20 @@ public class TradeAnalyticsService {
     }
 
     private List<ProductMetricDto> generateTopProducts(List<TariffRate> tariffRates) {
-        System.out.println("generateTopProducts called with " + tariffRates.size() + " tariff rates");
+        logger.debug("generateTopProducts called with {} tariff rates", tariffRates.size());
         
         // Group by product category and calculate average tariff metrics
         Map<String, List<TariffRate>> productGroups = tariffRates.stream()
                 .collect(Collectors.groupingBy(t -> t.getProductCategory().getCode()));
 
-        System.out.println("Found " + productGroups.size() + " product categories");
+        logger.debug("Found {} product categories", productGroups.size());
 
         return productGroups.entrySet().stream()
                 .map(entry -> {
                     String productCode = entry.getKey();
                     List<TariffRate> rates = entry.getValue();
                     
-                    System.out.println("Processing product " + productCode + " with " + rates.size() + " rates");
+                    logger.debug("Processing product {} with {} rates", productCode, rates.size());
                     
                     ProductMetricDto dto = new ProductMetricDto();
                     dto.code = productCode;
@@ -132,7 +137,7 @@ public class TradeAnalyticsService {
                                 .multiply(BigDecimal.valueOf(100)); // Convert to percentage
                     } else {
                         dto.baseRate = null;
-                        System.out.println("WARNING: No valid base rates found for product " + productCode);
+                        logger.warn("No valid base rates found for product {}", productCode);
                     }
                     
                     // Calculate average additional fee - handle nulls
@@ -147,11 +152,10 @@ public class TradeAnalyticsService {
                                 .divide(BigDecimal.valueOf(additionalFees.size()), 2, RoundingMode.HALF_UP);
                     } else {
                         dto.additionalFee = null;
-                        System.out.println("WARNING: No valid additional fees found for product " + productCode);
+                        logger.warn("No valid additional fees found for product {}", productCode);
                     }
                     
-                    System.out.println("Product " + productCode + ": baseRate=" + dto.baseRate + 
-                                     ", additionalFee=" + dto.additionalFee);
+                    logger.debug("Product {} summary: baseRate={}, additionalFee={}", productCode, dto.baseRate, dto.additionalFee);
                     
                     // Use base rate percentage as the primary sorting value
                     dto.totalValue = dto.baseRate;

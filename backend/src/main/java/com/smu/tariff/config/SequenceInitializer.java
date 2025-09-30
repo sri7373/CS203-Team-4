@@ -1,13 +1,17 @@
 package com.smu.tariff.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.stereotype.Component;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
 
 @Component
 public class SequenceInitializer implements ApplicationRunner {
+
+    private static final Logger logger = LoggerFactory.getLogger(SequenceInitializer.class);
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -18,6 +22,6 @@ public class SequenceInitializer implements ApplicationRunner {
         jdbcTemplate.execute(
             "SELECT setval('tariff_rate_id_seq', (SELECT COALESCE(MAX(id),0) FROM tariff_rate))"
         );
-        System.out.println("tariff_rate_id_seq synchronized with max(id)");
+        logger.info("tariff_rate_id_seq synchronized with max(id)");
     }
 }
