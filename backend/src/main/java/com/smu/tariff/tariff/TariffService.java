@@ -6,6 +6,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.io.ByteArrayOutputStream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +34,8 @@ import com.lowagie.text.pdf.*;
 @Service
 @Transactional
 public class TariffService {
+
+    private static final Logger logger = LoggerFactory.getLogger(TariffService.class);
 
     private final TariffRateRepository tariffRateRepository;
     private final CountryRepository countryRepository;
@@ -101,7 +105,7 @@ public class TariffService {
         BigDecimal tariffAmount = declared.multiply(baseRate).setScale(2, RoundingMode.HALF_UP);
         BigDecimal total = declared.add(tariffAmount).add(additionalFee).setScale(2, RoundingMode.HALF_UP);
 
-        System.out.println("TariffService: selected rate id=" + rate.getId() + " baseRate=" + baseRate + " additionalFee=" + additionalFee);
+        logger.info("Selected rate id={} baseRate={} additionalFee={}", rate.getId(), baseRate, additionalFee);
 
         // Prepare response
         TariffCalcResponse resp = new TariffCalcResponse();

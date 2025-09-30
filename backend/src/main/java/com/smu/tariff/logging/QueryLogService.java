@@ -1,5 +1,7 @@
 package com.smu.tariff.logging;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,6 +23,7 @@ public class QueryLogService {
 
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final int MAX_RESULT_LENGTH = 4096;
+    private static final Logger logger = LoggerFactory.getLogger(QueryLogService.class);
 
     private final QueryLogRepository queryLogRepository;
     private final UserRepository userRepository;
@@ -53,7 +56,7 @@ public class QueryLogService {
         String origin = originCountry != null ? originCountry : extractFromParams(params, "origin", "from");
         String destination = destinationCountry != null ? destinationCountry : extractFromParams(params, "destination", "to");
 
-        System.out.println("QueryLogService: saving log for user=" + resolvedUser);
+        logger.info("Saving log for user={}", resolvedUser);
         queryLogRepository.save(new QueryLog(user, type, params, serializedResult, origin, destination));
     }
 
@@ -109,7 +112,7 @@ public class QueryLogService {
                 return userRepository.findByUsername(username).orElse(null);
             }
         } catch (Exception ex) {
-            System.err.println("QueryLogService: failed to resolve user from token - " + ex.getMessage());
+            logger.warn("Failed to resolve user from token", ex);
         }
         return null;
     }
