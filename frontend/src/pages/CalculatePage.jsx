@@ -584,7 +584,7 @@ export default function CalculatePage() {
                     {formatCurrency(res.totalCost)}
                   </div>
                   <div className="small" style={{ marginTop: 8, opacity: 0.7 }}>
-                    Total = declaredValue + (declaredValue ・・・baseRate) +
+                    Total = declaredValue + (declaredValue × baseRate) +
                     additionalFee
                   </div>
                 </motion.div>
