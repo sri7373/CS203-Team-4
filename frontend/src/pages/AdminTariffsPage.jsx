@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import Select from "../components/Select.jsx";
@@ -220,10 +226,10 @@ export default function AdminTariffsPage() {
     if (feedbackTimeoutRef.current) {
       clearTimeout(feedbackTimeoutRef.current);
     }
-    
+
     setFeedback(message);
     setFeedbackType(type);
-    
+
     // Auto-hide after 5 seconds
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
