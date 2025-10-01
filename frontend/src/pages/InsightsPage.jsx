@@ -353,7 +353,13 @@ export default function InsightsPage() {
           percentage rates and additional fixed charges.
         </p>
 
-        <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} noValidate>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSearch();
+          }}
+          noValidate
+        >
           <div className="inline-fields field-cluster">
             <div className="field" style={{ flex: "1 1 220px" }}>
               <label htmlFor="countrySelect">Country</label>
@@ -373,11 +379,7 @@ export default function InsightsPage() {
             >
               {loading ? "Searching…" : "Search"}
             </button>
-            <button
-              type="button"
-              onClick={handleClear}
-              disabled={loading}
-            >
+            <button type="button" onClick={handleClear} disabled={loading}>
               Clear
             </button>
           </div>

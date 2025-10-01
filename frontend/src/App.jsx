@@ -15,7 +15,7 @@ export default function App() {
         </div>
       </main>
       <footer>
-        <div>© {year} TARIFF Platform. All rights reserved.</div>
+        <div>© {year} TARIFFSHERIFF Platform. All rights reserved.</div>
         <div className="legal">Confidential – Internal Use Only</div>
       </footer>
     </div>
