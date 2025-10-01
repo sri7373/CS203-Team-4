@@ -347,6 +347,49 @@ public class TariffService {
         return mapToDto(saved);
     }
 
+    // Overload for TariffRateDtoPost (used by admin create/update endpoints)
+    public TariffRateDto updateTariff(Long id, TariffRateDtoPost dto) {
+        TariffRate rate = tariffRateRepository.findById(id)
+                .orElseThrow(() -> new TariffNotFoundException("Tariff with id " + id + " not found"));
+
+        if (dto.originCountryCode != null) {
+            Country origin = countryRepository.findByCode(dto.originCountryCode.toUpperCase())
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown origin country code: " + dto.originCountryCode));
+            rate.setOrigin(origin);
+        }
+        if (dto.destinationCountryCode != null) {
+            Country dest = countryRepository.findByCode(dto.destinationCountryCode.toUpperCase())
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown destination country code: " + dto.destinationCountryCode));
+            rate.setDestination(dest);
+        }
+        if (dto.productCategoryCode != null) {
+            ProductCategory cat = productCategoryRepository.findByCode(dto.productCategoryCode.toUpperCase())
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown product category code: " + dto.productCategoryCode));
+            rate.setProductCategory(cat);
+        }
+        if (dto.baseRate != null) {
+            rate.setBaseRate(dto.baseRate);
+        }
+        if (dto.additionalFee != null) {
+            rate.setAdditionalFee(dto.additionalFee);
+        }
+        if (dto.effectiveFrom != null) {
+            rate.setEffectiveFrom(dto.effectiveFrom);
+        }
+        rate.setEffectiveTo(dto.effectiveTo);
+
+        TariffRate saved = tariffRateRepository.save(rate);
+
+        queryLogService.log(
+            "UPDATE_TARIFF", summarizeTariff(saved),
+            mapToDto(saved),
+            saved.getOrigin().getCode(),
+            saved.getDestination().getCode()
+        );
+
+        return mapToDto(saved);
+    }
+
     public void deleteTariff(Long id) {
         TariffRate rate = tariffRateRepository.findById(id)
                 .orElseThrow(() -> new TariffNotFoundException("Tariff with id " + id + " not found"));

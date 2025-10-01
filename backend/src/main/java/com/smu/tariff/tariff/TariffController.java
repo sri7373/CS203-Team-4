@@ -49,6 +49,32 @@ public class TariffController {
         return ResponseEntity.ok(tariffService.search(origin, destination, category));
     }
 
+    // Admin CRUD endpoints for tariff management
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<TariffRateDto>> getAllTariffs() {
+        return ResponseEntity.ok(tariffService.getAllTariffs());
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<TariffRateDto> createTariff(@Valid @RequestBody TariffRateDtoPost request) {
+        return ResponseEntity.ok(tariffService.createTariff(request));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<TariffRateDto> updateTariff(@PathVariable Long id, @Valid @RequestBody TariffRateDtoPost request) {
+        return ResponseEntity.ok(tariffService.updateTariff(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteTariff(@PathVariable Long id) {
+        tariffService.deleteTariff(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/calculate/summary")
     public ResponseEntity<java.util.Map<String, String>> generateSummary(@RequestBody TariffCalcResponse response) {
         String aiSummary = tariffService.generateAiSummary(response);

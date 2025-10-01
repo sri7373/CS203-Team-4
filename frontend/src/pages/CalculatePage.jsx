@@ -632,7 +632,7 @@ export default function CalculatePage() {
                     </div>
 
                     <div className="small ai-summary-footnote">
-                      Generated automatically based on tariff data
+                      Generated automatically based on tariff data, summary might not be fully accurate.
                     </div>
                   </motion.div>
 
