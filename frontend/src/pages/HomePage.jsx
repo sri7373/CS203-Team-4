@@ -52,6 +52,10 @@ const FEATURES = [
     desc: "Simplified tariff calculator with AI-powered trade analysis.",
   },
   {
+    title: "Export to PDF",
+    desc: "Export tariff calculations and reports to PDF format for easy sharing and printing.",
+  },
+  {
     title: "Rate Schedules",
     desc: "Browse and search detailed tariff rate schedules across countries and product categories.",
   },
