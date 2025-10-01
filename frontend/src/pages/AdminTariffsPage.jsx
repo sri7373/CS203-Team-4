@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import Select from "../components/Select.jsx";
@@ -54,6 +54,7 @@ export default function AdminTariffsPage() {
   const [countries, setCountries] = useState([]);
   const [categories, setCategories] = useState([]);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { tariff, show }
+  const feedbackTimeoutRef = useRef(null);
 
   const loadReferenceData = useCallback(async () => {
     setRefLoading(true);
@@ -164,6 +165,15 @@ export default function AdminTariffsPage() {
     loadTariffs();
   }, [loadTariffs]);
 
+  // Cleanup feedback timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const filteredTariffs = useMemo(() => {
     if (!filter.trim()) return tariffs;
     const q = filter.trim().toLowerCase();
@@ -206,11 +216,18 @@ export default function AdminTariffsPage() {
   };
 
   const showFeedback = (message, type = "success") => {
+    // Clear any existing timeout
+    if (feedbackTimeoutRef.current) {
+      clearTimeout(feedbackTimeoutRef.current);
+    }
+    
     setFeedback(message);
     setFeedbackType(type);
+    
     // Auto-hide after 5 seconds
-    setTimeout(() => {
+    feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
+      feedbackTimeoutRef.current = null;
     }, 5000);
   };
 
