@@ -636,7 +636,7 @@ export default function CalculatePage() {
                 {/* Total Cost - Prominent Display */}
                 <motion.div
                   className="result-panel glow-border"
-                  style={{ textAlign: "center", padding: "20px",marginTop: "24px" }}
+                  style={{ textAlign: "center", padding: "20px", marginTop: "24px" }}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.5 }}
