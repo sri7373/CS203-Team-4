@@ -78,6 +78,11 @@ export default function LoginPage() {
         Access your tariff calculation workspace.
       </p>
       <form onSubmit={submit} noValidate>
+        {error && (
+          <div className="error" role="alert" style={{ marginTop: 16 }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
         <div className="field">
           <label htmlFor="username">Username</label>
           <input
@@ -114,11 +119,6 @@ export default function LoginPage() {
           </Link>
         </div>
       </form>
-      {error && (
-        <div className="error" role="alert" style={{ marginTop: 16 }}>
-          <strong>Error:</strong> {error}
-        </div>
-      )}
     </div>
   );
 }
