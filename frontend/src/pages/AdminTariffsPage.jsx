@@ -651,14 +651,14 @@ export default function AdminTariffsPage() {
               <div className="btn-group" style={{ justifyContent: "flex-end" }}>
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="btn"
                   onClick={cancelDelete}
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  className="btn btn-danger"
+                  className="btn"
                   onClick={confirmDelete}
                   style={{
                     backgroundColor: "rgba(198, 40, 40, 0.8)",
