@@ -12,8 +12,9 @@ public class TariffCalcResponse {
     public BigDecimal tariffAmount;
     public BigDecimal additionalFee;
     public BigDecimal totalCost;
-
     public String notes;
+    public String aiSummary; // Contains an AI-generated HTML summary of the tariff calculation
+
 
     public TariffCalcResponse() { }
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import api from "../services/api.js";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,7 +21,9 @@ export default function CalculatePage() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const summaryRequestIdRef = useRef(0);
 
   const formatCurrency = (v) =>
     new Intl.NumberFormat("en-US", {
@@ -103,10 +105,36 @@ export default function CalculatePage() {
     }
   };
 
+  const fetchAiSummary = async (resultPayload, requestId) => {
+    if (!resultPayload) {
+      setAiSummaryLoading(false);
+      return;
+    }
+
+    try {
+      const { data } = await api.post("/api/tariffs/calculate/summary", resultPayload);
+      if (summaryRequestIdRef.current !== requestId) {
+        return;
+      }
+      setRes((prev) => (prev ? { ...prev, aiSummary: data?.aiSummary ?? "AI summary unavailable." } : prev));
+    } catch (err) {
+      console.error("AI summary error:", err);
+      if (summaryRequestIdRef.current !== requestId) {
+        return;
+      }
+      setRes((prev) => (prev ? { ...prev, aiSummary: "AI summary unavailable." } : prev));
+    } finally {
+      if (summaryRequestIdRef.current === requestId) {
+        setAiSummaryLoading(false);
+      }
+    }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setError(null);
     setRes(null);
+    setAiSummaryLoading(true);
     setLoading(true);
 
     try {
@@ -123,8 +151,12 @@ export default function CalculatePage() {
         date: date || undefined,
       };
 
-      const r = await api.post("/api/tariffs/calculate", payload);
-      setRes(r.data);
+      const requestId = summaryRequestIdRef.current + 1;
+      summaryRequestIdRef.current = requestId;
+
+      const { data } = await api.post("/api/tariffs/calculate?includeSummary=false", payload);
+      setRes(data);
+      fetchAiSummary(data, requestId);
       setRetryCount(0); // Reset retry count on success
     } catch (err) {
       console.error("Calculation error:", err);
@@ -140,7 +172,7 @@ export default function CalculatePage() {
         err.message?.includes("not found")
       ) {
         isDataUnavailable = true;
-        errorMessage = `No tariff data available for ${origin} → ${destination} (${category}). This trade route may not be covered in our current database, or no tariff schedule is active for the selected date.`;
+        errorMessage = `No tariff data available for ${origin} -> ${destination} (${category}). This trade route may not be covered in our current database, or no tariff schedule is active for the selected date.`;
       } else if (
         err.code === "NETWORK_ERROR" ||
         err.message.includes("Network Error")
@@ -164,6 +196,7 @@ export default function CalculatePage() {
           "Calculation failed. Please try again.";
       }
 
+      setAiSummaryLoading(false);
       setError({ message: errorMessage, isDataUnavailable });
     } finally {
       setLoading(false);
@@ -256,10 +289,9 @@ export default function CalculatePage() {
           </div>
           <div className="btn-group" style={{ marginTop: 8 }}>
             <button className="primary" type="submit" disabled={loading}>
-              {loading ? "Calculating…" : "Calculate"}
+              {loading ? "Calculating..." : "Calculate"}
             </button>
             <button
-              type="button"
               onClick={() => {
                 setRes(null);
                 setError(null);
@@ -560,11 +592,55 @@ export default function CalculatePage() {
                     </span>
                   </motion.div>
                 </div>
+                
+                {/* AI Summary Section */}
+                <motion.div
+                    className="result-panel glow-border ai-summary-panel"
+                    style={{ background: "var(--color-surface)", color: "var(--color-text)", border: "1px solid var(--color-border-strong)", padding: "20px" }}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    <div
+                      className="label"
+                      style={{ marginBottom: 8, fontSize: "12px", textAlign: "center" }}
+                    >
+                      AI SUMMARY
+                    </div>
+
+                    <div
+                      className="ai-summary-body"
+                      role="status"
+                      aria-live="polite"
+                      aria-busy={aiSummaryLoading}
+                      style={{ minHeight: 120, width: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      {aiSummaryLoading ? (
+                        <div className="ai-summary-loading">
+                          <div className="spinner-small" aria-hidden="true" />
+                          <span>Generating AI summary...</span>
+                        </div>
+                      ) : res && res.aiSummary ? (
+                        <div
+                          className="ai-summary-content"
+                          style={{ fontSize: "14px", lineHeight: 1.6, textAlign: "justify", color: "var(--color-text)" }}
+                          dangerouslySetInnerHTML={{ __html: res.aiSummary }}
+                        />
+                      ) : (
+                        <div className="ai-summary-empty">AI summary unavailable.</div>
+                      )}
+                    </div>
+
+                    <div className="small ai-summary-footnote">
+                      Generated automatically based on tariff data, summary might not be fully accurate.
+                    </div>
+                  </motion.div>
+
 
                 {/* Total Cost - Prominent Display */}
                 <motion.div
                   className="result-panel glow-border"
-                  style={{ textAlign: "center", padding: "20px" }}
+                  style={{ textAlign: "center", padding: "20px", marginTop: "24px" }}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.5 }}
@@ -588,7 +664,7 @@ export default function CalculatePage() {
                     {formatCurrency(res.totalCost)}
                   </div>
                   <div className="small" style={{ marginTop: 8, opacity: 0.7 }}>
-                    Total = declaredValue + (declaredValue × baseRate) +
+                    Total = declaredValue + (declaredValue * baseRate) +
                     additionalFee
                   </div>
                 </motion.div>

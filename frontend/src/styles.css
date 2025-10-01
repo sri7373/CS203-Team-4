@@ -261,6 +261,67 @@ button, .input, select { position: relative; z-index: 1; }
 .result-panel .total-row td { background:linear-gradient(90deg,rgba(99,102,241,0.15),rgba(139,92,246,0.18)); font-weight:600; }
 .result-panel .total-row td b { font-weight:700; }
 
+.ai-summary-panel {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border-strong);
+  padding: 20px;
+}
+[data-theme="dark"] .ai-summary-panel {
+  background: rgba(13, 16, 28, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.ai-summary-body {
+  min-height: 120px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ai-summary-content {
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: justify;
+  color: var(--color-text);
+  width: 100%;
+}
+.ai-summary-content b {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+.ai-summary-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+.ai-summary-loading span {
+  font-weight: 600;
+}
+.ai-summary-empty {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+.ai-summary-footnote {
+  margin-top: 12px;
+  opacity: 0.75;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+[data-theme="dark"] .ai-summary-footnote {
+  opacity: 0.85;
+}
+
+.ai-summary-panel .label {
+  margin-bottom: 8px;
+  font-size: 12px;
+  text-align: center;
+}
+
+
 /* Custom Select Component */
 .select-root { position:relative; }
 .select-trigger { width:100%; text-align:left; background:var(--color-bg-alt); border:1px solid rgba(12, 0, 0, 0.1); padding:10px 42px 10px 14px; border-radius:10px; font-size:14px; color:var(--color-text); line-height:1.3; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; font-family: var(--font-sans); box-shadow:inset 0 1px 2px rgba(0,0,0,0.6),0 4px 12px -6px rgba(0,0,0,0.55); transition: background .2s, border-color .2s, box-shadow .25s; position:relative; }
@@ -297,6 +358,7 @@ button, .input, select { position: relative; z-index: 1; }
 .metric-card .label { font-size: var(--text-sm); font-weight:600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing:.5px; }
 .metric-highlight { font-size: 28px; font-weight:700; letter-spacing:.4px; }
 .tiny { font-size: var(--text-xs); color: var(--color-text-muted); line-height:1.5; }
+
 
 
 /* Admin Tariffs console */

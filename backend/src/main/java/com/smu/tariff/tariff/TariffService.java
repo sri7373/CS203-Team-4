@@ -28,6 +28,15 @@ import com.smu.tariff.tariff.dto.TariffCalcRequest;
 import com.smu.tariff.tariff.dto.TariffCalcResponse;
 import com.smu.tariff.tariff.dto.TariffRateDto;
 import com.smu.tariff.tariff.dto.TariffRateDtoPost;
+import com.smu.tariff.user.User;
+import com.smu.tariff.user.UserRepository;
+import org.springframework.security.core.userdetails.UserDetails;
+import com.smu.tariff.ai.GeminiClient;
+
+import com.lowagie.text.*;
+import com.lowagie.text.pdf.*;
+import org.jsoup.Jsoup;
+import org.jsoup.safety.Safelist;
 
 @Service
 @Transactional
@@ -39,18 +48,26 @@ public class TariffService {
     private final CountryRepository countryRepository;
     private final ProductCategoryRepository productCategoryRepository;
     private final QueryLogService queryLogService;
+    private static final Safelist AI_SUMMARY_SAFE_LIST = Safelist.none().addTags("p", "b");
+    private final GeminiClient geminiClient;
 
     public TariffService(TariffRateRepository tariffRateRepository,
                          CountryRepository countryRepository,
                          ProductCategoryRepository productCategoryRepository,
-                         QueryLogService queryLogService) {
+                         QueryLogService queryLogService,
+                         GeminiClient geminiClient) {
         this.tariffRateRepository = tariffRateRepository;
         this.countryRepository = countryRepository;
         this.productCategoryRepository = productCategoryRepository;
         this.queryLogService = queryLogService;
+        this.geminiClient = geminiClient;
     }
 
     public TariffCalcResponse calculate(TariffCalcRequest req) {
+        return calculate(req, true);
+    }
+
+    public TariffCalcResponse calculate(TariffCalcRequest req, boolean includeSummary) {
         if (req.originCountryCode == null || req.originCountryCode.trim().isEmpty()) {
             throw new InvalidTariffRequestException("Origin country code is required");
         }
@@ -92,8 +109,11 @@ public class TariffService {
         }
 
         BigDecimal declared = BigDecimal.valueOf(req.declaredValue);
-        BigDecimal tariffAmount = declared.multiply(rate.getBaseRate()).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal total = declared.add(tariffAmount).add(rate.getAdditionalFee()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal baseRate = rate.getBaseRate() != null ? rate.getBaseRate() : BigDecimal.ZERO;
+        BigDecimal additionalFee = rate.getAdditionalFee() != null ? rate.getAdditionalFee() : BigDecimal.ZERO;
+
+        BigDecimal tariffAmount = declared.multiply(baseRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal total = declared.add(tariffAmount).add(additionalFee).setScale(2, RoundingMode.HALF_UP);
 
         TariffCalcResponse resp = new TariffCalcResponse();
         resp.originCountryCode = origin.getCode();
@@ -101,11 +121,12 @@ public class TariffService {
         resp.productCategoryCode = cat.getCode();
         resp.effectiveDate = date.toString();
         resp.declaredValue = declared;
-        resp.baseRate = rate.getBaseRate();
+        resp.baseRate = baseRate;
         resp.tariffAmount = tariffAmount;
-        resp.additionalFee = rate.getAdditionalFee();
+        resp.additionalFee = additionalFee;
         resp.totalCost = total;
         resp.notes = "Total = declaredValue + (declaredValue * baseRate) + additionalFee";
+        resp.aiSummary = null; // to be filled later
 
         queryLogService.log(
             "CALCULATE",
@@ -120,7 +141,94 @@ public class TariffService {
             resp.destinationCountryCode
         );
 
+        if (includeSummary) {
+            String prompt = buildAiPrompt(resp);
+
+            try {
+                String aiSummary = geminiClient.generateSummary(prompt);
+                resp.aiSummary = normalizeAiSummary(aiSummary);
+            } catch (Exception e) {
+                logger.warn("Failed to generate AI summary", e);
+                resp.aiSummary = "AI summary unavailable.";
+            }
+        } else {
+            resp.aiSummary = null;
+        }
+
         return resp;
+    }
+
+    public String generateAiSummary(TariffCalcResponse resp) {
+        if (resp == null) {
+            throw new IllegalArgumentException("Tariff response is required");
+        }
+
+        String prompt = buildAiPrompt(resp);
+        try {
+            String aiSummary = geminiClient.generateSummary(prompt);
+            return normalizeAiSummary(aiSummary);
+        } catch (Exception e) {
+            logger.warn("Failed to generate AI summary", e);
+            return "AI summary unavailable.";
+        }
+    }
+
+
+    private String normalizeAiSummary(String raw) {
+        if (raw == null) {
+            return null;
+        }
+
+        String content = raw.trim();
+        if (content.isEmpty()) {
+            return "";
+        }
+
+        content = content.replace("\r\n", "\n");
+        content = content.replaceAll("\\*\\*(.+?)\\*\\*", "<b>$1</b>");
+
+        if (!content.toLowerCase().contains("<p")) {
+            String[] paragraphs = content.split("\n{2,}");
+            content = java.util.Arrays.stream(paragraphs)
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(p -> p.replace("\n", " "))
+                    .map(p -> p.replaceAll("\\s+", " "))
+                    .map(p -> "<p>" + p.trim() + "</p>")
+                    .collect(java.util.stream.Collectors.joining());
+        }
+
+        String sanitized = Jsoup.clean(content, AI_SUMMARY_SAFE_LIST);
+        return sanitized.replace("\n", "").trim();
+    }
+
+    private String buildAiPrompt(TariffCalcResponse resp) {
+        return String.format("""
+            You are an international trade analyst. In fewer than 120 words, explain why the following tariff structure could be in place.
+
+            Tariff inputs:
+            - Origin country: %s
+            - Destination country: %s
+            - Product category: %s
+            - Effective date: %s
+            - Declared value (USD): %s
+            - Base rate: %s
+            - Calculated tariff amount: %s
+            - Additional fee: %s
+            - Total landed cost: %s
+
+            Focus on likely trade policies, agreements, or market dynamics that would justify the base rate and additional fee. Provide one actionable insight importers can use to manage this tariff exposure. Respond only with HTML consisting of exactly two <p> elements and use <b> tags for emphasis. Do not use Markdown.
+            """,
+            resp.originCountryCode,
+            resp.destinationCountryCode,
+            resp.productCategoryCode,
+            resp.effectiveDate,
+            resp.declaredValue.toPlainString(),
+            resp.baseRate.toPlainString(),
+            resp.tariffAmount.toPlainString(),
+            resp.additionalFee.toPlainString(),
+            resp.totalCost.toPlainString()
+        );
     }
 
     public List<TariffRateDto> search(String originCode, String destCode, String catCode) {
@@ -226,6 +334,49 @@ public class TariffService {
         if (dto.effectiveTo != null) {
             rate.setEffectiveTo(dto.effectiveTo);
         }
+
+        TariffRate saved = tariffRateRepository.save(rate);
+
+        queryLogService.log(
+            "UPDATE_TARIFF", summarizeTariff(saved),
+            mapToDto(saved),
+            saved.getOrigin().getCode(),
+            saved.getDestination().getCode()
+        );
+
+        return mapToDto(saved);
+    }
+
+    // Overload for TariffRateDtoPost (used by admin create/update endpoints)
+    public TariffRateDto updateTariff(Long id, TariffRateDtoPost dto) {
+        TariffRate rate = tariffRateRepository.findById(id)
+                .orElseThrow(() -> new TariffNotFoundException("Tariff with id " + id + " not found"));
+
+        if (dto.originCountryCode != null) {
+            Country origin = countryRepository.findByCode(dto.originCountryCode.toUpperCase())
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown origin country code: " + dto.originCountryCode));
+            rate.setOrigin(origin);
+        }
+        if (dto.destinationCountryCode != null) {
+            Country dest = countryRepository.findByCode(dto.destinationCountryCode.toUpperCase())
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown destination country code: " + dto.destinationCountryCode));
+            rate.setDestination(dest);
+        }
+        if (dto.productCategoryCode != null) {
+            ProductCategory cat = productCategoryRepository.findByCode(dto.productCategoryCode.toUpperCase())
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown product category code: " + dto.productCategoryCode));
+            rate.setProductCategory(cat);
+        }
+        if (dto.baseRate != null) {
+            rate.setBaseRate(dto.baseRate);
+        }
+        if (dto.additionalFee != null) {
+            rate.setAdditionalFee(dto.additionalFee);
+        }
+        if (dto.effectiveFrom != null) {
+            rate.setEffectiveFrom(dto.effectiveFrom);
+        }
+        rate.setEffectiveTo(dto.effectiveTo);
 
         TariffRate saved = tariffRateRepository.save(rate);
 
@@ -350,3 +501,6 @@ public class TariffService {
         return dto;
     }
 }
+
+
+

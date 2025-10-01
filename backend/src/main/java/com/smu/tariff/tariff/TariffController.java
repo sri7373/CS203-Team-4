@@ -36,8 +36,9 @@ public class TariffController {
 
     @PostMapping("/calculate")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    public ResponseEntity<TariffCalcResponse> calculate(@Valid @RequestBody TariffCalcRequest request) {
-        return ResponseEntity.ok(tariffService.calculate(request));
+    public ResponseEntity<TariffCalcResponse> calculate(@Valid @RequestBody TariffCalcRequest request,
+                                                         @RequestParam(value = "includeSummary", defaultValue = "true") boolean includeSummary) {
+        return ResponseEntity.ok(tariffService.calculate(request, includeSummary));
     }
 
     @GetMapping("/rates")
@@ -48,37 +49,40 @@ public class TariffController {
         return ResponseEntity.ok(tariffService.search(origin, destination, category));
     }
 
-    @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<TariffRateDto> create(@RequestBody @Valid TariffRateDtoPost dto) {
-        return ResponseEntity.ok(tariffService.createTariff(dto));
-    }
-
+    // Admin CRUD endpoints for tariff management
     @GetMapping
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    public ResponseEntity<List<TariffRateDto>> getAll() {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<TariffRateDto>> getAllTariffs() {
         return ResponseEntity.ok(tariffService.getAllTariffs());
     }
 
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    public ResponseEntity<TariffRateDto> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(tariffService.getTariffById(id));
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<TariffRateDto> createTariff(@Valid @RequestBody TariffRateDtoPost request) {
+        return ResponseEntity.ok(tariffService.createTariff(request));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<TariffRateDto> update(@PathVariable Long id, @RequestBody @Valid TariffRateDto dto) {
-        return ResponseEntity.ok(tariffService.updateTariff(id, dto));
+    public ResponseEntity<TariffRateDto> updateTariff(@PathVariable Long id, @Valid @RequestBody TariffRateDtoPost request) {
+        return ResponseEntity.ok(tariffService.updateTariff(id, request));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteTariff(@PathVariable Long id) {
         tariffService.deleteTariff(id);
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/calculate/summary")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    public ResponseEntity<java.util.Map<String, String>> generateSummary(@RequestBody TariffCalcResponse response) {
+        String aiSummary = tariffService.generateAiSummary(response);
+        return ResponseEntity.ok(java.util.Map.of("aiSummary", aiSummary));
+    }
+
+    //To generate PDF
     @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping(value = "/calculate/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
