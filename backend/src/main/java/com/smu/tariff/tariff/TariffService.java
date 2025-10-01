@@ -31,6 +31,8 @@ import com.smu.tariff.ai.GeminiClient;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
+import org.jsoup.Jsoup;
+import org.jsoup.safety.Safelist;
 
 @Service
 @Transactional
@@ -42,6 +44,7 @@ public class TariffService {
     private final CountryRepository countryRepository;
     private final ProductCategoryRepository productCategoryRepository;
     private final com.smu.tariff.logging.QueryLogService queryLogService;
+    private static final Safelist AI_SUMMARY_SAFE_LIST = Safelist.none().addTags("p", "b");
     private final GeminiClient geminiClient;
 
     public TariffService(TariffRateRepository tariffRateRepository,
@@ -185,18 +188,19 @@ public class TariffService {
         content = content.replace("\r\n", "\n");
         content = content.replaceAll("\\*\\*(.+?)\\*\\*", "<b>$1</b>");
 
-        if (content.toLowerCase().contains("<p")) {
-            return content;
+        if (!content.toLowerCase().contains("<p")) {
+            String[] paragraphs = content.split("\n{2,}");
+            content = java.util.Arrays.stream(paragraphs)
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(p -> p.replace("\n", " "))
+                    .map(p -> p.replaceAll("\\s+", " "))
+                    .map(p -> "<p>" + p.trim() + "</p>")
+                    .collect(java.util.stream.Collectors.joining());
         }
 
-        String[] paragraphs = content.split("\n{2,}");
-        return java.util.Arrays.stream(paragraphs)
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .map(p -> p.replace("\n", " "))
-                .map(p -> p.replaceAll("\\s+", " "))
-                .map(p -> "<p>" + p.trim() + "</p>")
-                .collect(java.util.stream.Collectors.joining());
+        String sanitized = Jsoup.clean(content, AI_SUMMARY_SAFE_LIST);
+        return sanitized.replace("\n", "").trim();
     }
 
     private String buildAiPrompt(TariffCalcResponse resp) {
@@ -335,4 +339,7 @@ public class TariffService {
         return out.toByteArray();
     }
 }
+
+
+
 

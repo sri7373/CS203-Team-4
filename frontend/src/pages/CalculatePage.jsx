@@ -612,9 +612,9 @@ export default function CalculatePage() {
                       style={{ minHeight: 120, width: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
                       {aiSummaryLoading ? (
-                        <div className="ai-summary-loading" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, color: "var(--color-text-muted)", fontSize: "14px" }}>
+                        <div className="ai-summary-loading">
                           <div className="spinner-small" aria-hidden="true" />
-                          <span style={{ fontWeight: 600 }}>Generating AI summary...</span>
+                          <span>Generating AI summary...</span>
                         </div>
                       ) : res && res.aiSummary ? (
                         <div
@@ -623,11 +623,11 @@ export default function CalculatePage() {
                           dangerouslySetInnerHTML={{ __html: res.aiSummary }}
                         />
                       ) : (
-                        <div className="ai-summary-empty" style={{ fontSize: "14px", fontWeight: 500, color: "var(--color-text-muted)" }}>AI summary unavailable.</div>
+                        <div className="ai-summary-empty">AI summary unavailable.</div>
                       )}
                     </div>
 
-                    <div className="small ai-summary-footnote" style={{ marginTop: 12, opacity: 0.75, color: "var(--color-text-muted)", textAlign: "center" }}>
+                    <div className="small ai-summary-footnote">
                       Generated automatically based on tariff data
                     </div>
                   </motion.div>
