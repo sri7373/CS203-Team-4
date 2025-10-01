@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import api from "../services/api.js";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +19,7 @@ export default function CalculatePage() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const summaryRequestIdRef = useRef(0);
 
   const formatCurrency = (v) =>
     new Intl.NumberFormat("en-US", {
@@ -91,13 +92,37 @@ export default function CalculatePage() {
         errorMessage = err.message || "PDF generation failed";
       }
 
-      setAiSummaryLoading(false);
       setError({ message: errorMessage, isDataUnavailable });
     } finally {
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
       setPdfLoading(false);
+    }
+  };
+
+  const fetchAiSummary = async (resultPayload, requestId) => {
+    if (!resultPayload) {
+      setAiSummaryLoading(false);
+      return;
+    }
+
+    try {
+      const { data } = await api.post("/api/tariffs/calculate/summary", resultPayload);
+      if (summaryRequestIdRef.current !== requestId) {
+        return;
+      }
+      setRes((prev) => (prev ? { ...prev, aiSummary: data?.aiSummary ?? "AI summary unavailable." } : prev));
+    } catch (err) {
+      console.error("AI summary error:", err);
+      if (summaryRequestIdRef.current !== requestId) {
+        return;
+      }
+      setRes((prev) => (prev ? { ...prev, aiSummary: "AI summary unavailable." } : prev));
+    } finally {
+      if (summaryRequestIdRef.current === requestId) {
+        setAiSummaryLoading(false);
+      }
     }
   };
 
@@ -122,9 +147,12 @@ export default function CalculatePage() {
         date: date || undefined,
       };
 
-      const r = await api.post("/api/tariffs/calculate", payload);
-      setRes(r.data);
-      setAiSummaryLoading(false);
+      const requestId = summaryRequestIdRef.current + 1;
+      summaryRequestIdRef.current = requestId;
+
+      const { data } = await api.post("/api/tariffs/calculate?includeSummary=false", payload);
+      setRes(data);
+      fetchAiSummary(data, requestId);
       setRetryCount(0); // Reset retry count on success
     } catch (err) {
       console.error("Calculation error:", err);
@@ -168,7 +196,6 @@ export default function CalculatePage() {
       setError({ message: errorMessage, isDataUnavailable });
     } finally {
       setLoading(false);
-      setAiSummaryLoading(false);
     }
   };
 
@@ -565,6 +592,7 @@ export default function CalculatePage() {
                 {/* AI Summary Section */}
                 <motion.div
                     className="result-panel glow-border ai-summary-panel"
+                    style={{ background: "var(--color-surface)", color: "var(--color-text)", border: "1px solid var(--color-border-strong)", padding: "20px" }}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.5 }}
@@ -581,23 +609,25 @@ export default function CalculatePage() {
                       role="status"
                       aria-live="polite"
                       aria-busy={aiSummaryLoading}
+                      style={{ minHeight: 120, width: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
                       {aiSummaryLoading ? (
-                        <div className="ai-summary-loading">
+                        <div className="ai-summary-loading" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, color: "var(--color-text-muted)", fontSize: "14px" }}>
                           <div className="spinner-small" aria-hidden="true" />
-                          <span>Generating AI summary...</span>
+                          <span style={{ fontWeight: 600 }}>Generating AI summary...</span>
                         </div>
                       ) : res && res.aiSummary ? (
                         <div
                           className="ai-summary-content"
+                          style={{ fontSize: "14px", lineHeight: 1.6, textAlign: "justify", color: "var(--color-text)" }}
                           dangerouslySetInnerHTML={{ __html: res.aiSummary }}
                         />
                       ) : (
-                        <div className="ai-summary-empty">AI summary unavailable.</div>
+                        <div className="ai-summary-empty" style={{ fontSize: "14px", fontWeight: 500, color: "var(--color-text-muted)" }}>AI summary unavailable.</div>
                       )}
                     </div>
 
-                    <div className="small ai-summary-footnote">
+                    <div className="small ai-summary-footnote" style={{ marginTop: 12, opacity: 0.75, color: "var(--color-text-muted)", textAlign: "center" }}>
                       Generated automatically based on tariff data
                     </div>
                   </motion.div>
@@ -666,9 +696,3 @@ export default function CalculatePage() {
     </MotionWrapper>
   );
 }
-
-
-
-
-
-

@@ -25,8 +25,9 @@ public class TariffController {
 
     //To calculate tariff based on request
     @PostMapping("/calculate")
-    public ResponseEntity<TariffCalcResponse> calculate(@Valid @RequestBody TariffCalcRequest request) {
-        return ResponseEntity.ok(tariffService.calculate(request));
+    public ResponseEntity<TariffCalcResponse> calculate(@Valid @RequestBody TariffCalcRequest request,
+                                                         @RequestParam(value = "includeSummary", defaultValue = "true") boolean includeSummary) {
+        return ResponseEntity.ok(tariffService.calculate(request, includeSummary));
     }
 
     //To fetch tariff rates based on search criteria
@@ -35,6 +36,12 @@ public class TariffController {
                                                       @RequestParam(required = false) String destination,
                                                       @RequestParam(required = false) String category) {
         return ResponseEntity.ok(tariffService.search(origin, destination, category));
+    }
+
+    @PostMapping("/calculate/summary")
+    public ResponseEntity<java.util.Map<String, String>> generateSummary(@RequestBody TariffCalcResponse response) {
+        String aiSummary = tariffService.generateAiSummary(response);
+        return ResponseEntity.ok(java.util.Map.of("aiSummary", aiSummary));
     }
 
     //To generate PDF

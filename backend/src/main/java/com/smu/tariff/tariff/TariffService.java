@@ -59,6 +59,10 @@ public class TariffService {
     }
 
     public TariffCalcResponse calculate(TariffCalcRequest req) {
+        return calculate(req, true);
+    }
+
+    public TariffCalcResponse calculate(TariffCalcRequest req, boolean includeSummary) {
         // Validate input
         if (req.originCountryCode == null || req.originCountryCode.trim().isEmpty()) {
             throw new InvalidTariffRequestException("Origin country code is required");
@@ -135,21 +139,37 @@ public class TariffService {
             resp.destinationCountryCode
         );
 
-        String prompt = buildAiPrompt(resp);
+        if (includeSummary) {
+            String prompt = buildAiPrompt(resp);
 
-
-        try {
-            String aiSummary = geminiClient.generateSummary(prompt);
-            resp.aiSummary = normalizeAiSummary(aiSummary);
-        } catch (Exception e) {
-            logger.warn("Failed to generate AI summary", e);
-            resp.aiSummary = "AI summary unavailable.";
+            try {
+                String aiSummary = geminiClient.generateSummary(prompt);
+                resp.aiSummary = normalizeAiSummary(aiSummary);
+            } catch (Exception e) {
+                logger.warn("Failed to generate AI summary", e);
+                resp.aiSummary = "AI summary unavailable.";
+            }
+        } else {
+            resp.aiSummary = null;
         }
-
 
         return resp;
     }
 
+    public String generateAiSummary(TariffCalcResponse resp) {
+        if (resp == null) {
+            throw new IllegalArgumentException("Tariff response is required");
+        }
+
+        String prompt = buildAiPrompt(resp);
+        try {
+            String aiSummary = geminiClient.generateSummary(prompt);
+            return normalizeAiSummary(aiSummary);
+        } catch (Exception e) {
+            logger.warn("Failed to generate AI summary", e);
+            return "AI summary unavailable.";
+        }
+    }
 
 
     private String normalizeAiSummary(String raw) {
