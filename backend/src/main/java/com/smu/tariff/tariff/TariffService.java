@@ -109,8 +109,11 @@ public class TariffService {
         }
 
         BigDecimal declared = BigDecimal.valueOf(req.declaredValue);
-        BigDecimal tariffAmount = declared.multiply(rate.getBaseRate()).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal total = declared.add(tariffAmount).add(rate.getAdditionalFee()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal baseRate = rate.getBaseRate() != null ? rate.getBaseRate() : BigDecimal.ZERO;
+        BigDecimal additionalFee = rate.getAdditionalFee() != null ? rate.getAdditionalFee() : BigDecimal.ZERO;
+
+        BigDecimal tariffAmount = declared.multiply(baseRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal total = declared.add(tariffAmount).add(additionalFee).setScale(2, RoundingMode.HALF_UP);
 
         TariffCalcResponse resp = new TariffCalcResponse();
         resp.originCountryCode = origin.getCode();
