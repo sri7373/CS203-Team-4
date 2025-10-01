@@ -76,6 +76,7 @@ public class TariffController {
     }
 
     @PostMapping("/calculate/summary")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public ResponseEntity<java.util.Map<String, String>> generateSummary(@RequestBody TariffCalcResponse response) {
         String aiSummary = tariffService.generateAiSummary(response);
         return ResponseEntity.ok(java.util.Map.of("aiSummary", aiSummary));
