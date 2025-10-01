@@ -3,14 +3,18 @@ import api from "../services/api.js";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import Select from "../components/Select.jsx";
-
-const COUNTRIES = ["SGP", "USA", "CHN", "MYS", "IDN"];
-const CATEGORIES = ["STEEL", "ELEC", "FOOD"];
+import {
+  COUNTRY_CODES,
+  DEFAULT_DESTINATION_CODE,
+  DEFAULT_ORIGIN_CODE,
+  DEFAULT_PRODUCT_CATEGORY,
+  PRODUCT_CATEGORY_CODES,
+} from "../constants/referenceOptions.js";
 
 export default function CalculatePage() {
-  const [origin, setOrigin] = useState("SGP");
-  const [destination, setDestination] = useState("USA");
-  const [category, setCategory] = useState("STEEL");
+  const [origin, setOrigin] = useState(DEFAULT_ORIGIN_CODE);
+  const [destination, setDestination] = useState(DEFAULT_DESTINATION_CODE);
+  const [category, setCategory] = useState(DEFAULT_PRODUCT_CATEGORY);
   const [declared, setDeclared] = useState(1000.0);
   const [date, setDate] = useState("");
   const [res, setRes] = useState(null);
@@ -237,7 +241,7 @@ export default function CalculatePage() {
                 id="origin"
                 value={origin}
                 onChange={setOrigin}
-                options={COUNTRIES}
+                options={COUNTRY_CODES}
               />
             </div>
             <div className="field" style={{ flex: "1 1 220px" }}>
@@ -246,7 +250,7 @@ export default function CalculatePage() {
                 id="destination"
                 value={destination}
                 onChange={setDestination}
-                options={COUNTRIES}
+                options={COUNTRY_CODES}
               />
             </div>
             <div className="field" style={{ flex: "1 1 220px" }}>
@@ -255,7 +259,7 @@ export default function CalculatePage() {
                 id="category"
                 value={category}
                 onChange={setCategory}
-                options={CATEGORIES}
+                options={PRODUCT_CATEGORY_CODES}
               />
             </div>
           </div>

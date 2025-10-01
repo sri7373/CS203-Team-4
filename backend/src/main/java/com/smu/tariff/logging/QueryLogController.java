@@ -1,5 +1,8 @@
 package com.smu.tariff.logging;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +23,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/query-logs")
 public class QueryLogController {
 
+    private static final Logger logger = LoggerFactory.getLogger(QueryLogController.class);
+
     private final QueryLogRepository queryLogRepository;
     private final QueryLogService queryLogService;
 
@@ -37,10 +42,10 @@ public class QueryLogController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(result);
         }
 
-        System.out.println("=== QueryLogController: getAllQueryLogs called for user=" + currentUser.getUsername() + " ===");
+        logger.info("getAllQueryLogs called for user={}", currentUser.getUsername());
 
         List<QueryLog> logs = queryLogRepository.findByUserIdWithUser(currentUser.getId());
-        System.out.println("Retrieved " + logs.size() + " logs from database for user=" + currentUser.getUsername());
+        logger.info("Retrieved {} logs from database for user={}", logs.size(), currentUser.getUsername());
 
         List<Map<String, Object>> dtoList = new ArrayList<>();
         for (QueryLog log : logs) {
@@ -48,12 +53,12 @@ public class QueryLogController {
             dtoList.add(map);
 
             if (dtoList.size() <= 3) {
-                System.out.println("Log DTO " + map.get("id") + ": " + map.get("action") + " - " + log.getParams());
+                logger.debug("Log DTO {}: {} - {}", map.get("id"), map.get("action"), log.getParams());
             }
         }
         result = dtoList;
 
-        System.out.println("=== Returning " + result.size() + " logs to frontend (user=" + currentUser.getUsername() + ") ===");
+        logger.info("Returning {} logs to frontend for user={}", result.size(), currentUser.getUsername());
         return ResponseEntity.ok(result);
     }
 
@@ -68,12 +73,12 @@ public class QueryLogController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(result);
         }
 
-        System.out.println("QueryLogController: getQueryLogsByUser called for userId=" + userId);
+        logger.info("getQueryLogsByUser called for userId={}", userId);
         List<QueryLog> logs = queryLogRepository.findByUserIdWithUser(userId);
         for (QueryLog log : logs) {
             result.add(buildResponseMap(log));
         }
-        System.out.println("Returning " + result.size() + " logs for userId=" + userId);
+        logger.info("Returning {} logs for userId={}", result.size(), userId);
         return ResponseEntity.ok(result);
     }
 
@@ -86,7 +91,7 @@ public class QueryLogController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
 
-        System.out.println("QueryLogController: testConnection() called for user=" + currentUser.getUsername());
+        logger.info("testConnection invoked for user={}", currentUser.getUsername());
         try {
             long totalLogs = queryLogRepository.countByUser_Id(currentUser.getId());
             response.put("status", "Controller is working");
@@ -94,13 +99,13 @@ public class QueryLogController {
             response.put("totalLogs", totalLogs);
             response.put("databaseConnected", true);
 
-            System.out.println("QueryLogController: Test successful - found " + totalLogs + " logs for user=" + currentUser.getUsername());
+            logger.info("testConnection succeeded: found {} logs for user={}", totalLogs, currentUser.getUsername());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("status", "Database query failed");
             response.put("error", e.getMessage());
             response.put("databaseConnected", false);
-            System.err.println("Database test failed: " + e.getMessage());
+            logger.error("Database test failed: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body(response);
         }
     }
@@ -114,7 +119,7 @@ public class QueryLogController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
 
-        System.out.println("QueryLogController: debugDatabase() called for user=" + currentUser.getUsername());
+        logger.info("debugDatabase invoked for user={}", currentUser.getUsername());
         try {
             List<QueryLog> logs = queryLogRepository.findByUserIdWithUser(currentUser.getId());
             response.put("totalForUser", logs.size());
@@ -137,14 +142,13 @@ public class QueryLogController {
                     .collect(Collectors.toList());
             response.put("sampleLogs", logDetails);
 
-            System.out.println("QueryLogController: Debug successful - " + logs.size() + " logs for user=" + currentUser.getUsername());
+            logger.info("debugDatabase succeeded: {} logs for user={}", logs.size(), currentUser.getUsername());
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             response.put("error", e.getMessage());
             response.put("errorType", e.getClass().getSimpleName());
-            System.err.println("Debug failed: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("debugDatabase failed: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body(response);
         }
     }
@@ -168,7 +172,7 @@ public class QueryLogController {
             }
             return ResponseEntity.ok(out);
         } catch (Exception e) {
-            System.err.println("rawLatest error: " + e.getMessage());
+            logger.error("rawLatest query failed: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body(out);
         }
     }
@@ -184,7 +188,7 @@ public class QueryLogController {
             dto.setResultPreview(summarize(log.getResult()));
         } catch (Exception ex) {
             dto.setResultPreview("-");
-            System.err.println("QueryLogController: summarize failed for log " + log.getId() + " - " + ex.getMessage());
+            logger.warn("summarize failed for log {}: {}", log.getId(), ex.getMessage(), ex);
         }
 
         if (log.getUser() != null) {

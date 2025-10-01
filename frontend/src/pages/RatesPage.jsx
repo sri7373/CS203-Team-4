@@ -3,9 +3,10 @@ import api from "../services/api.js";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import Select from "../components/Select.jsx";
-
-const COUNTRIES = ["SGP", "USA", "CHN", "MYS", "IDN"];
-const CATEGORIES = ["STEEL", "ELEC", "FOOD"];
+import {
+  COUNTRY_CODES,
+  PRODUCT_CATEGORY_CODES,
+} from "../constants/referenceOptions.js";
 
 export default function RatesPage() {
   const [origin, setOrigin] = useState("");
@@ -64,7 +65,7 @@ export default function RatesPage() {
                 id="origin"
                 value={origin}
                 onChange={setOrigin}
-                options={COUNTRIES}
+                options={COUNTRY_CODES}
                 placeholder="(Any)"
               />
             </div>
@@ -74,7 +75,7 @@ export default function RatesPage() {
                 id="destination"
                 value={destination}
                 onChange={setDestination}
-                options={COUNTRIES}
+                options={COUNTRY_CODES}
                 placeholder="(Any)"
               />
             </div>
@@ -84,7 +85,7 @@ export default function RatesPage() {
                 id="category"
                 value={category}
                 onChange={setCategory}
-                options={CATEGORIES}
+                options={PRODUCT_CATEGORY_CODES}
                 placeholder="(Any)"
               />
             </div>

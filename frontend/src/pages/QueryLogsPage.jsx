@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import api from "../services/api.js";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 
