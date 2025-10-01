@@ -39,93 +39,90 @@ export default function InsightsPage() {
   const [retryCount, setRetryCount] = useState(0);
   const [lastLoadedCountry, setLastLoadedCountry] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadInsights = async () => {
+    if (!country) {
+      setError("Please select a country");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
     const controller = new AbortController();
 
-    const load = async () => {
-      if (!country) {
+    try {
+      console.log(
+        `Loading trade insights from AWS PostgreSQL database for: ${country}`
+      );
+
+      // Add timeout to the request
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+      const response = await api.get("/api/trade/insights", {
+        params: { country },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      console.log("Trade insights loaded successfully:", response.data);
+      setInsights(response.data);
+      setLastLoadedCountry(country);
+      setRetryCount(0); // Reset retry count on success
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error("Failed to load trade insights:", err);
+
+        let errorMessage;
+        if (err.name === "AbortError") {
+          errorMessage =
+            "Request timed out. The server may be busy. Please try again.";
+        } else if (
+          err.code === "NETWORK_ERROR" ||
+          err.message.includes("Network Error")
+        ) {
+          errorMessage =
+            "Network connection failed. Please check your internet connection.";
+        } else if (err?.response?.status >= 500) {
+          errorMessage =
+            "Server error occurred. Our team has been notified. Please try again in a few moments.";
+        } else if (err?.response?.status === 404) {
+          errorMessage = `No trade data found for ${country}. This country may not have tariff relationships in our database.`;
+        } else if (err?.response?.status === 429) {
+          errorMessage =
+            "Too many requests. Please wait a moment before trying again.";
+        } else {
+          errorMessage =
+            err?.response?.data?.message ||
+            err?.formattedMessage ||
+            err?.message ||
+            "Unable to load trade insights from database";
+        }
+
+        setError(errorMessage);
         setInsights(null);
-        setLastLoadedCountry(null);
-        return;
       }
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      setLoading(true);
-      setError(null);
+  const handleSearch = () => {
+    setRetryCount(0);
+    loadInsights();
+  };
 
-      try {
-        console.log(
-          `Loading trade insights from AWS PostgreSQL database for: ${country}`
-        );
-
-        // Add timeout to the request
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-
-        const response = await api.get("/api/trade/insights", {
-          params: { country },
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!cancelled) {
-          console.log("Trade insights loaded successfully:", response.data);
-          setInsights(response.data);
-          setLastLoadedCountry(country);
-          setRetryCount(0); // Reset retry count on success
-        }
-      } catch (err) {
-        if (!cancelled && err.name !== "AbortError") {
-          console.error("Failed to load trade insights:", err);
-
-          let errorMessage;
-          if (err.name === "AbortError") {
-            errorMessage =
-              "Request timed out. The server may be busy. Please try again.";
-          } else if (
-            err.code === "NETWORK_ERROR" ||
-            err.message.includes("Network Error")
-          ) {
-            errorMessage =
-              "Network connection failed. Please check your internet connection.";
-          } else if (err?.response?.status >= 500) {
-            errorMessage =
-              "Server error occurred. Our team has been notified. Please try again in a few moments.";
-          } else if (err?.response?.status === 404) {
-            errorMessage = `No trade data found for ${country}. This country may not have tariff relationships in our database.`;
-          } else if (err?.response?.status === 429) {
-            errorMessage =
-              "Too many requests. Please wait a moment before trying again.";
-          } else {
-            errorMessage =
-              err?.response?.data?.message ||
-              err?.formattedMessage ||
-              err?.message ||
-              "Unable to load trade insights from database";
-          }
-
-          setError(errorMessage);
-          setInsights(null);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [country]);
+  const handleClear = () => {
+    setCountry("SGP");
+    setInsights(null);
+    setError(null);
+    setRetryCount(0);
+    setLastLoadedCountry(null);
+  };
 
   const handleRetry = () => {
     if (retryCount < 3) {
       setRetryCount(retryCount + 1);
-      // Trigger re-load by temporarily changing country state
-      const currentCountry = country;
-      setCountry("");
-      setTimeout(() => setCountry(currentCountry), 100);
+      loadInsights();
     }
   };
 
@@ -356,20 +353,35 @@ export default function InsightsPage() {
           percentage rates and additional fixed charges.
         </p>
 
-        <div
-          className="inline-fields field-cluster"
-          style={{ marginBottom: 16 }}
-        >
-          <div className="field" style={{ flex: "1 1 220px", maxWidth: 260 }}>
-            <label htmlFor="countrySelect">Country</label>
-            <Select
-              id="countrySelect"
-              value={country}
-              onChange={setCountry}
-              options={COUNTRIES}
-            />
+        <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} noValidate>
+          <div className="inline-fields field-cluster">
+            <div className="field" style={{ flex: "1 1 220px" }}>
+              <label htmlFor="countrySelect">Country</label>
+              <Select
+                id="countrySelect"
+                value={country}
+                onChange={setCountry}
+                options={COUNTRIES}
+              />
+            </div>
           </div>
-        </div>
+          <div className="btn-group" style={{ marginTop: 8 }}>
+            <button
+              type="submit"
+              className="primary"
+              disabled={loading || !country}
+            >
+              {loading ? "Searching…" : "Search"}
+            </button>
+            <button
+              type="button"
+              onClick={handleClear}
+              disabled={loading}
+            >
+              Clear
+            </button>
+          </div>
+        </form>
 
         {error && (
           <motion.div
@@ -646,50 +658,9 @@ export default function InsightsPage() {
         )}
 
         {!loading && !insights && !error && (
-          <motion.div
-            style={{
-              marginTop: 32,
-              padding: 24,
-              textAlign: "center",
-              background: "rgba(255,255,255,0.05)",
-              borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.1)",
-            }}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div style={{ fontSize: "48px", marginBottom: 16, opacity: 0.3 }}>
-              📊
-            </div>
-            <h3
-              style={{
-                fontWeight: 600,
-                marginBottom: 8,
-                color: "var(--color-text)",
-              }}
-            >
-              Trade Insights Dashboard
-            </h3>
-            <p className="small" style={{ marginBottom: 16, opacity: 0.7 }}>
-              Select a country above to view detailed tariff analytics,
-              including:
-            </p>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: 12,
-                marginTop: 16,
-                fontSize: "13px",
-                opacity: 0.8,
-              }}
-            >
-              <div>• Import/Export tariff rates</div>
-              <div>• Product category breakdowns</div>
-              <div>• Trading partner analysis</div>
-              <div>• Average tariff levels</div>
-            </div>
-          </motion.div>
+          <div className="small" style={{ marginTop: 32 }}>
+            No results yet. Run a search to view configured tariff rates.
+          </div>
         )}
       </div>
     </MotionWrapper>

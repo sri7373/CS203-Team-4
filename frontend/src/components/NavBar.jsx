@@ -34,7 +34,7 @@ export default function NavBar() {
       <div className="wrap">
         <Link to="/" className="brand" aria-label="Tariff Home">
           <span className="logo" />
-          <span>TARIFF</span>
+          <span>TARIFFSHERIFF</span>
         </Link>
         {loggedIn && (
           <>
