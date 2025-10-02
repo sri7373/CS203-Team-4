@@ -12,6 +12,17 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Reusable style for field validation errors
+  const fieldErrorStyle = {
+    marginTop: 6,
+    fontSize: "13px",
+    color: "#ef4444",
+    padding: "6px 10px",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderRadius: "4px",
+    border: "1px solid rgba(239, 68, 68, 0.2)",
+  };
+
   const parseValidationError = (message) => {
     const errors = {};
 
@@ -163,15 +174,7 @@ export default function RegisterPage() {
             <div
               id="username-error"
               role="alert"
-              style={{
-                marginTop: 6,
-                fontSize: "13px",
-                color: "#ef4444",
-                padding: "6px 10px",
-                backgroundColor: "rgba(239, 68, 68, 0.1)",
-                borderRadius: "4px",
-                border: "1px solid rgba(239, 68, 68, 0.2)",
-              }}
+              style={fieldErrorStyle}
             >
               ⚠ Username {fieldErrors.username}
             </div>
@@ -194,15 +197,7 @@ export default function RegisterPage() {
             <div
               id="email-error"
               role="alert"
-              style={{
-                marginTop: 6,
-                fontSize: "13px",
-                color: "#ef4444",
-                padding: "6px 10px",
-                backgroundColor: "rgba(239, 68, 68, 0.1)",
-                borderRadius: "4px",
-                border: "1px solid rgba(239, 68, 68, 0.2)",
-              }}
+              style={fieldErrorStyle}
             >
               ⚠ Email {fieldErrors.email}
             </div>
@@ -227,15 +222,7 @@ export default function RegisterPage() {
             <div
               id="password-error"
               role="alert"
-              style={{
-                marginTop: 6,
-                fontSize: "13px",
-                color: "#ef4444",
-                padding: "6px 10px",
-                backgroundColor: "rgba(239, 68, 68, 0.1)",
-                borderRadius: "4px",
-                border: "1px solid rgba(239, 68, 68, 0.2)",
-              }}
+              style={fieldErrorStyle}
             >
               ⚠ Password {fieldErrors.password}
             </div>
