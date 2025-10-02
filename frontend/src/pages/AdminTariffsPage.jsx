@@ -672,11 +672,7 @@ export default function AdminTariffsPage() {
               </p>
 
               <div className="btn-group" style={{ justifyContent: "flex-end" }}>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={cancelDelete}
-                >
+                <button type="button" className="btn" onClick={cancelDelete}>
                   Cancel
                 </button>
                 <button
