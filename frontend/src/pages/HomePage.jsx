@@ -48,8 +48,12 @@ export default function HomePage() {
 
 const FEATURES = [
   {
-    title: "Calculator with AI Summary",
-    desc: "Simplified tariff calculator with AI-powered trade analysis.",
+    title: "Tariff Calculator",
+    desc: "Simplified tariff calculator with informative calculation analysis.",
+  },
+  {
+    title: "AI Summary",
+    desc: "AI-generated summaries of tariff calculations and insights.",
   },
   {
     title: "Export to PDF",

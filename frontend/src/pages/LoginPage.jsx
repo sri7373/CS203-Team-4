@@ -74,15 +74,15 @@ export default function LoginPage() {
       aria-labelledby="loginTitle"
     >
       <h2 id="loginTitle">Sign In</h2>
-      <p className="small" style={{ marginTop: -12 }}>
+      <p className="small" style={{ marginTop: -12, marginBottom: 24 }}>
         Access your tariff calculation workspace.
       </p>
+      {error && (
+        <div className="error" role="alert" style={{ marginBottom: 20 }}>
+          <strong>Error:</strong> {error}
+        </div>
+      )}
       <form onSubmit={submit} noValidate>
-        {error && (
-          <div className="error" role="alert" style={{ marginTop: 16 }}>
-            <strong>Error:</strong> {error}
-          </div>
-        )}
         <div className="field">
           <label htmlFor="username">Username</label>
           <input
