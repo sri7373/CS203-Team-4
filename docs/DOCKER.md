@@ -16,11 +16,14 @@ Your Docker setup properly splits into:
 
 ## Quick Start
 
-### Development Environment (Local PostgreSQL)
+### Development Environment (PostgreSQL)
 
 ```bash
 # Start all services
 docker-compose -f docker-compose.dev.yml up -d
+
+# Rebuild if there's changes
+docker-compose -f docker-compose.dev.yml up -d --build
 
 # View logs
 docker-compose -f docker-compose.dev.yml logs -f
