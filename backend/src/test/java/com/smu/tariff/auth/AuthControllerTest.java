@@ -14,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,9 +32,12 @@ import static org.hamcrest.Matchers.*;
  * - Validation
  * - Exception handling
  * - Response serialization
+ * 
+ * Uses H2 in-memory database for testing (isolated from production AWS database).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class AuthControllerTest {
 
