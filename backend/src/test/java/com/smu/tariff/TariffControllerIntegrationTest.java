@@ -108,6 +108,12 @@ class TariffControllerIntegrationTest {
     }
 
     // ==================== Calculate Endpoint Tests ====================
+    
+    // TODO: These tests currently FAIL with 500 errors because the database lacks tariff rate data.
+    // This is a known bug - the application should return proper status codes when data is missing.
+    // Fix by either:
+    // 1. Adding test data setup (e.g., @Sql scripts to populate countries/products/tariff rates), OR
+    // 2. Fixing the application to handle missing data gracefully (return 404/400 instead of 500)
 
     @Test
     void calculateTariff_ShouldReturnValidResponse_WhenValidRequestProvided() {
@@ -124,6 +130,7 @@ class TariffControllerIntegrationTest {
         // When: POST request is made to /api/tariff/calculate
         // Then: Should return 200 OK with valid response structure
         given()
+            .header("Authorization", "Bearer " + userJwtToken)
             .contentType(ContentType.JSON)
             .body(requestBody)
         .when()
@@ -156,6 +163,7 @@ class TariffControllerIntegrationTest {
         // When: POST request is made
         // Then: Should return 400 Bad Request
         given()
+            .header("Authorization", "Bearer " + userJwtToken)
             .contentType(ContentType.JSON)
             .body(requestBody)
         .when()
@@ -179,6 +187,7 @@ class TariffControllerIntegrationTest {
         // When: POST request is made
         // Then: Should return 400 Bad Request
         given()
+            .header("Authorization", "Bearer " + userJwtToken)
             .contentType(ContentType.JSON)
             .body(requestBody)
         .when()
@@ -202,6 +211,7 @@ class TariffControllerIntegrationTest {
         // When: POST request is made
         // Then: Should return 400 Bad Request
         given()
+            .header("Authorization", "Bearer " + userJwtToken)
             .contentType(ContentType.JSON)
             .body(requestBody)
         .when()
@@ -210,14 +220,13 @@ class TariffControllerIntegrationTest {
             .statusCode(400);
     }
 
-    // ==================== Search Endpoint Tests ====================
-
     @Test
     void searchTariffs_ShouldReturnResults_WhenValidFiltersProvided() {
         // Given: Valid search parameters
         // When: GET request is made to /api/tariff/search with filters
         // Then: Should return 200 OK with array of results
         given()
+            .header("Authorization", "Bearer " + userJwtToken)
             .queryParam("origin", "SGP")
             .queryParam("destination", "USA")
             .queryParam("category", "ELEC")
@@ -235,6 +244,7 @@ class TariffControllerIntegrationTest {
         // When: GET request is made without filters
         // Then: Should return 200 OK with all tariffs
         given()
+            .header("Authorization", "Bearer " + userJwtToken)
         .when()
             .get("/api/tariff/search")
         .then()
@@ -259,6 +269,12 @@ class TariffControllerIntegrationTest {
             .statusCode(anyOf(is(401), is(403)));
     }
 
+    // ==================== Admin Endpoint Tests (DISABLED) ====================
+    // NOTE: These tests are commented out because the admin endpoints
+    // (/api/tariff/admin/*) do not exist in the current TariffController.
+    // Uncomment and update these tests if admin endpoints are added in the future.
+
+    /*
     @Test
     void protectedEndpoint_ShouldReturn200_WhenValidAuthenticationProvided() {
         // Given: Valid JWT token for admin user
@@ -341,6 +357,7 @@ class TariffControllerIntegrationTest {
         .then()
             .statusCode(403);
     }
+    */
 
     // ==================== CORS Tests ====================
 
