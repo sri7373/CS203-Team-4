@@ -16,6 +16,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Size;
+
 
 @Entity
 @Table(name = "users")
@@ -25,19 +31,33 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false, length = 64)
+    // Username must not be blank and within a valid length range of 6-30
+    @NotBlank(message = "Username cannot be blank")
+    @Size(min = 6, max = 30, message = "Username must be between 6 and 30 characters")
+    @Column(unique = true, nullable = false, length = 30)
     private String username;
 
+    // Email must be valid format and unique
+    @NotBlank(message = "Email cannot be blank")
+    @Email(message = "Email should be valid")
+    @Size(max = 128)
     @Column(unique = true, nullable = false, length = 128)
     private String email;
 
+    // Password cannot be blank and must meet length requirements
+    @NotBlank(message = "Password cannot be blank")
+    @Size(min = 8, max = 20, message = "Password must be between 8 and 20 characters")
     @Column(nullable = false, length = 100)
     private String password;
 
+    // Role cannot be null
+    @NotNull(message = "Role is required")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Role role = Role.USER;
 
+    // Auto-set when the user is created
+    @PastOrPresent
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -68,11 +88,12 @@ public class User implements UserDetails {
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 
-    // UserDetails
+    // === UserDetails Interface Implementation ===
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
+
     @Override
     public boolean isAccountNonExpired() { return true; }
     @Override
@@ -82,3 +103,4 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() { return true; }
 }
+
