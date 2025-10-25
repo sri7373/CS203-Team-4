@@ -25,7 +25,7 @@ export default function RatesPage() {
       if (origin) params.set("origin", origin);
       if (destination) params.set("destination", destination);
       if (category) params.set("category", category);
-      const r = await api.get("/api/tariffs/rates?" + params.toString());
+      const r = await api.get("/tariffs/rates?" + params.toString());
       setRows(r.data);
     } catch (err) {
       setError(err?.response?.data || "Search failed");

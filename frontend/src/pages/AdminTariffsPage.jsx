@@ -75,10 +75,10 @@ export default function AdminTariffsPage() {
       const categoryLookup = new Map(
         categoryData.map((item) => [item.code, item])
       );
-      const allowedCountries = COUNTRY_CODES.map((code) => ({
-        value: code,
-        label: code,
-        name: countryLookup.get(code)?.name || "",
+      const allowedCountries = COUNTRY_CODES.map((country) => ({
+        value: country.code,
+        label: country.code,
+        name: countryLookup.get(country.code)?.name || country.name || "",
       }));
       const allowedCategories = PRODUCT_CATEGORY_CODES.map((code) => ({
         value: code,
@@ -108,9 +108,9 @@ export default function AdminTariffsPage() {
       setReferenceError(null);
     } catch (err) {
       console.error("Failed to load reference data", err);
-      const fallbackCountries = COUNTRY_CODES.map((code) => ({
-        value: code,
-        label: code,
+      const fallbackCountries = COUNTRY_CODES.map((country) => ({
+        value: country.code,
+        label: country.code,
       }));
       const fallbackCategories = PRODUCT_CATEGORY_CODES.map((code) => ({
         value: code,
@@ -152,7 +152,7 @@ export default function AdminTariffsPage() {
     setLoading(true);
     setListError(null);
     try {
-      const res = await api.get("/api/tariffs");
+      const res = await api.get("/tariffs");
       setTariffs(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Failed to load tariffs", err);
@@ -320,12 +320,12 @@ export default function AdminTariffsPage() {
     setSaving(true);
     try {
       if (editing) {
-        await api.put(`/api/tariffs/${editing.id}`, payload);
+        await api.put(`/tariffs/${editing.id}`, payload);
         setOperationStatus({ type: "update", id: editing.id });
         showFeedback(`✓ Tariff #${editing.id} updated successfully`, "success");
         resetForm();
       } else {
-        const response = await api.post("/api/tariffs", payload);
+        const response = await api.post("/tariffs", payload);
         const newId = response.data?.id || "new";
         setOperationStatus({ type: "create", id: newId });
         showFeedback(`✓ Tariff created successfully (ID: ${newId})`, "success");
@@ -356,7 +356,7 @@ export default function AdminTariffsPage() {
     setDeletingId(tariff.id);
     setFormError(null);
     try {
-      await api.delete(`/api/tariffs/${tariff.id}`);
+      await api.delete(`/tariffs/${tariff.id}`);
       setOperationStatus({ type: "delete", id: tariff.id });
       showFeedback(`✓ Tariff #${tariff.id} deleted successfully`, "success");
       await loadTariffs();
