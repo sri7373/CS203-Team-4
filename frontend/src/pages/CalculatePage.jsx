@@ -1,11 +1,11 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import api from "../services/api.js";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import TariffNewsSidebar from "../components/TariffNewsSidebar.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import Select from "../components/Select.jsx";
+import { useReferenceOptions } from "../hooks/useReferenceOptions.js";
 import {
-  COUNTRY_CODES,
   DEFAULT_DESTINATION_CODE,
   DEFAULT_ORIGIN_CODE,
   DEFAULT_PRODUCT_CATEGORY,
@@ -13,9 +13,21 @@ import {
 } from "../constants/referenceOptions.js";
 
 export default function CalculatePage() {
-  const [origin, setOrigin] = useState(DEFAULT_ORIGIN_CODE);
-  const [destination, setDestination] = useState(DEFAULT_DESTINATION_CODE);
-  const [category, setCategory] = useState(DEFAULT_PRODUCT_CATEGORY);
+  const { countries, categories } = useReferenceOptions();
+  const countryOptions = useMemo(
+    () => (countries && countries.length ? countries : []),
+    [countries]
+  );
+  const categoryOptions = useMemo(
+    () =>
+      categories && categories.length
+        ? categories
+        : PRODUCT_CATEGORY_CODES.map((value) => ({ value, label: value })),
+    [categories]
+  );
+  const [origin, setOrigin] = useState(DEFAULT_ORIGIN_CODE || "");
+  const [destination, setDestination] = useState(DEFAULT_DESTINATION_CODE || "");
+  const [category, setCategory] = useState(DEFAULT_PRODUCT_CATEGORY || "");
   const [declared, setDeclared] = useState(1000.0);
   const [date, setDate] = useState("");
   const [res, setRes] = useState(null);
@@ -25,6 +37,45 @@ export default function CalculatePage() {
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const summaryRequestIdRef = useRef(0);
+
+  useEffect(() => {
+    if (!countryOptions.length) {
+      return;
+    }
+    setOrigin((prev) => {
+      if (prev && countryOptions.some((opt) => opt.value === prev)) {
+        return prev;
+      }
+      const fallback =
+        countryOptions.find((opt) => opt.value === DEFAULT_ORIGIN_CODE)?.value ??
+        countryOptions[0].value;
+      return fallback;
+    });
+    setDestination((prev) => {
+      if (prev && countryOptions.some((opt) => opt.value === prev)) {
+        return prev;
+      }
+      const fallback =
+        countryOptions.find((opt) => opt.value === DEFAULT_DESTINATION_CODE)?.value ??
+        countryOptions[Math.min(1, countryOptions.length - 1)].value;
+      return fallback;
+    });
+  }, [countries]);
+
+  useEffect(() => {
+    if (!categoryOptions.length) {
+      return;
+    }
+    setCategory((prev) => {
+      if (prev && categoryOptions.some((opt) => opt.value === prev)) {
+        return prev;
+      }
+      const fallback =
+        categoryOptions.find((opt) => opt.value === DEFAULT_PRODUCT_CATEGORY)?.value ??
+        categoryOptions[0].value;
+      return fallback;
+    });
+  }, [categoryOptions]);
 
   const formatCurrency = (v) =>
     new Intl.NumberFormat("en-US", {
@@ -262,7 +313,7 @@ export default function CalculatePage() {
                     id="origin"
                     value={origin}
                     onChange={setOrigin}
-                    options={COUNTRY_CODES}
+                    options={countryOptions}
                   />
                 </div>
                 <div className="field" style={{ flex: "1 1 220px" }}>
@@ -271,7 +322,7 @@ export default function CalculatePage() {
                     id="destination"
                     value={destination}
                     onChange={setDestination}
-                    options={COUNTRY_CODES}
+                    options={countryOptions}
                   />
                 </div>
                 <div className="field" style={{ flex: "1 1 220px" }}>
@@ -280,7 +331,7 @@ export default function CalculatePage() {
                     id="category"
                     value={category}
                     onChange={setCategory}
-                    options={PRODUCT_CATEGORY_CODES}
+                    options={categoryOptions}
                   />
                 </div>
               </div>

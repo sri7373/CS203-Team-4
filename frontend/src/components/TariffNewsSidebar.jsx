@@ -2,10 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../services/api.js";
 import Select from "./Select.jsx";
-import {
-  COUNTRY_CODES,
-  PRODUCT_CATEGORIES,
-} from "../constants/referenceOptions.js";
+import { useReferenceOptions } from "../hooks/useReferenceOptions.js";
 
 export default function TariffNewsSidebar({ limit = 8 }) {
   const [news, setNews] = useState([]);
@@ -14,10 +11,31 @@ export default function TariffNewsSidebar({ limit = 8 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const { countries, categories } = useReferenceOptions();
 
   useEffect(() => {
     fetchNews();
   }, [selectedCountry, selectedCategory]);
+
+  useEffect(() => {
+    if (
+      selectedCountry &&
+      countries.length &&
+      !countries.some((option) => option.value === selectedCountry)
+    ) {
+      setSelectedCountry("");
+    }
+  }, [countries, selectedCountry]);
+
+  useEffect(() => {
+    if (
+      selectedCategory &&
+      categories.length &&
+      !categories.some((option) => option.value === selectedCategory)
+    ) {
+      setSelectedCategory("");
+    }
+  }, [categories, selectedCategory]);
 
   const fetchNews = async () => {
     setLoading(true);
@@ -172,12 +190,12 @@ export default function TariffNewsSidebar({ limit = 8 }) {
                 <Select
                   id="news-country-filter"
                   value={selectedCountry}
-                  onChange={(e) => setSelectedCountry(e.target.value)}
+                  onChange={setSelectedCountry}
                   options={[
                     { value: "", label: "All Countries" },
-                    ...COUNTRY_CODES.map((c) => ({
-                      value: c.code,
-                      label: `${c.flag} ${c.name}`,
+                    ...countries.map((c) => ({
+                      value: c.value,
+                      label: c.label,
                     })),
                   ]}
                   placeholder="Select country..."
@@ -204,10 +222,10 @@ export default function TariffNewsSidebar({ limit = 8 }) {
                 <Select
                   id="news-category-filter"
                   value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  onChange={setSelectedCategory}
                   options={[
                     { value: "", label: "All Categories" },
-                    ...PRODUCT_CATEGORIES.map((c) => ({
+                    ...categories.map((c) => ({
                       value: c.value,
                       label: c.label,
                     })),
@@ -245,25 +263,19 @@ export default function TariffNewsSidebar({ limit = 8 }) {
                   >
                     {selectedCountry && (
                       <span
-                        style={{
-                          fontSize: "11px",
-                          padding: "2px 8px",
-                          background: "rgba(129, 140, 248, 0.2)",
-                          borderRadius: "10px",
-                          color: "var(--color-text)",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        {
-                          COUNTRY_CODES.find((c) => c.code === selectedCountry)
-                            ?.flag
-                        }
-                        {
-                          COUNTRY_CODES.find((c) => c.code === selectedCountry)
-                            ?.name
-                        }
+                       style={{
+                         fontSize: "11px",
+                         padding: "2px 8px",
+                         background: "rgba(129, 140, 248, 0.2)",
+                         borderRadius: "10px",
+                         color: "var(--color-text)",
+                         display: "inline-flex",
+                         alignItems: "center",
+                         gap: "4px",
+                       }}
+                     >
+                        {countries.find((c) => c.value === selectedCountry)
+                          ?.label || selectedCountry}
                         <button
                           onClick={() => setSelectedCountry("")}
                           style={{
@@ -282,22 +294,19 @@ export default function TariffNewsSidebar({ limit = 8 }) {
                     )}
                     {selectedCategory && (
                       <span
-                        style={{
-                          fontSize: "11px",
-                          padding: "2px 8px",
-                          background: "rgba(129, 140, 248, 0.2)",
-                          borderRadius: "10px",
-                          color: "var(--color-text)",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        {
-                          PRODUCT_CATEGORIES.find(
-                            (c) => c.value === selectedCategory
-                          )?.label
-                        }
+                       style={{
+                         fontSize: "11px",
+                         padding: "2px 8px",
+                         background: "rgba(129, 140, 248, 0.2)",
+                         borderRadius: "10px",
+                         color: "var(--color-text)",
+                         display: "inline-flex",
+                         alignItems: "center",
+                         gap: "4px",
+                       }}
+                     >
+                        {categories.find((c) => c.value === selectedCategory)
+                          ?.label || selectedCategory}
                         <button
                           onClick={() => setSelectedCategory("")}
                           style={{

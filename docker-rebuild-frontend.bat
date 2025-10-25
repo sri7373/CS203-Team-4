@@ -34,3 +34,4 @@ echo.
 echo To view frontend logs:
 echo   docker-compose -f docker-compose.dev.yml logs -f frontend
 echo.
+![1761413290676](image/docker-rebuild-frontend/1761413290676.png)![1761413302182](image/docker-rebuild-frontend/1761413302182.png)![1761415988107](image/docker-rebuild-frontend/1761415988107.png)![1761416004479](image/docker-rebuild-frontend/1761416004479.png)
