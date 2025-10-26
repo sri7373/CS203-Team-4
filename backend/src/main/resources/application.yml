@@ -3,9 +3,10 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://aws-csd-db.cpa8somwae85.ap-southeast-1.rds.amazonaws.com:5432/postgres
-    username: postgres
-    password: lordshiva15_SRI
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/postgres}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: update
@@ -28,16 +29,16 @@ logging:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:fvbMVJWfii+dPc5Ih2W6s9IC7C+fIdZgC2B/VVnEjBM=}
+    secret: ${JWT_SECRET:change-me}
     expirationMs: ${JWT_EXPIRATION_MS:86400000} # 1 day
 gemini:
   api:
-    key: ${GEMINI_API_KEY:AIzaSyCxgqgrYbMCQs9178XiPkabKLKkMGi9q-g}
+    key: ${GEMINI_API_KEY:}
 
 # NewsData.io API Configuration
 # Get your API key from: https://newsdata.io/register
 # Place your API key below (replace YOUR_NEWSDATA_API_KEY with actual key)
 newsdata:
   api:
-    key: ${NEWSDATA_API_KEY:pub_7713507262314bd18c0fb64c8536c7bc}
+    key: ${NEWSDATA_API_KEY:}
 # Swagger UI path: http://localhost:8080/swagger-ui/index.html

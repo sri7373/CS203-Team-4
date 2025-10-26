@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -17,11 +18,27 @@ public class SequenceInitializer implements ApplicationRunner {
     private JdbcTemplate jdbcTemplate;
 
     @Override
-    public void run(ApplicationArguments args) throws Exception {
-        // Reset sequence to MAX(id) in the table
-        jdbcTemplate.execute(
-            "SELECT setval('tariff_rate_id_seq', (SELECT COALESCE(MAX(id),0) FROM tariff_rate))"
-        );
-        logger.info("tariff_rate_id_seq synchronized with max(id)");
+    public void run(ApplicationArguments args) {
+        try {
+            Long maxId = jdbcTemplate.queryForObject(
+                "SELECT MAX(id) FROM tariff_rate",
+                Long.class
+            );
+
+            long sequenceValue = (maxId == null || maxId < 1) ? 1L : maxId;
+            boolean isCalled = maxId != null && maxId >= 1;
+
+            jdbcTemplate.execute(String.format(
+                "SELECT setval('tariff_rate_id_seq', %d, %s)",
+                sequenceValue,
+                Boolean.toString(isCalled)
+            ));
+            logger.info("tariff_rate_id_seq synchronized with value {}", sequenceValue);
+        } catch (DataAccessException ex) {
+            logger.warn(
+                "Skipping tariff_rate_id_seq initialization: {}",
+                ex.getMessage()
+            );
+        }
     }
 }
