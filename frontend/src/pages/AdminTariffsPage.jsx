@@ -381,7 +381,7 @@ export default function AdminTariffsPage() {
         err?.response?.data?.message ||
         "Delete failed";
       setFormError(errorMsg);
-      showFeedback(`✁E${errorMsg}`, "error");
+      showFeedback(`✗${errorMsg}`, "error");
     } finally {
       setDeletingId(null);
     }
