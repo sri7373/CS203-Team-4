@@ -10,6 +10,7 @@ import MotionWrapper from "../components/MotionWrapper.jsx";
 import Select from "../components/Select.jsx";
 import {
   COUNTRY_CODES,
+  PRODUCT_CATEGORIES,
   DEFAULT_DESTINATION_CODE,
   DEFAULT_ORIGIN_CODE,
   DEFAULT_PRODUCT_CATEGORY,
@@ -69,22 +70,30 @@ export default function AdminTariffsPage() {
         fetchCountries(),
         fetchProductCategories(),
       ]);
-      const countryLookup = new Map(
-        countryData.map((item) => [item.code, item])
-      );
-      const categoryLookup = new Map(
-        categoryData.map((item) => [item.code, item])
-      );
-      const allowedCountries = COUNTRY_CODES.map((code) => ({
-        value: code,
-        label: code,
-        name: countryLookup.get(code)?.name || "",
-      }));
-      const allowedCategories = PRODUCT_CATEGORY_CODES.map((code) => ({
-        value: code,
-        label: code,
-        name: categoryLookup.get(code)?.name || "",
-      }));
+      const allowedCountries = countryData
+        .map((item) => {
+          const code = (item.code || "").toUpperCase();
+          if (!code) return null;
+          const name = item.name ? item.name.trim() : "";
+          return {
+            value: code,
+            label: name ? `${code} — ${name}` : code,
+            name: name || code,
+          };
+        })
+        .filter(Boolean);
+      const allowedCategories = categoryData
+        .map((item) => {
+          const code = (item.code || "").toUpperCase();
+          if (!code) return null;
+          const name = item.name ? item.name.trim() : "";
+          return {
+            value: code,
+            label: name ? `${code} — ${name}` : code,
+            name: name || code,
+          };
+        })
+        .filter(Boolean);
       setCountries(allowedCountries);
       setCategories(allowedCategories);
       setForm((prev) => ({
@@ -108,13 +117,15 @@ export default function AdminTariffsPage() {
       setReferenceError(null);
     } catch (err) {
       console.error("Failed to load reference data", err);
-      const fallbackCountries = COUNTRY_CODES.map((code) => ({
-        value: code,
-        label: code,
+      const fallbackCountries = COUNTRY_CODES.map((country) => ({
+        value: country.value ?? country.code,
+        label: country.label ?? country.name ?? country.value ?? country.code,
+        name: country.name ?? country.label ?? country.value ?? country.code,
       }));
-      const fallbackCategories = PRODUCT_CATEGORY_CODES.map((code) => ({
-        value: code,
-        label: code,
+      const fallbackCategories = PRODUCT_CATEGORIES.map((category) => ({
+        value: category.value ?? category,
+        label: category.label ?? category.value ?? category,
+        name: category.label ?? category.value ?? category,
       }));
       setCountries(fallbackCountries);
       setCategories(fallbackCategories);
@@ -152,7 +163,7 @@ export default function AdminTariffsPage() {
     setLoading(true);
     setListError(null);
     try {
-      const res = await api.get("/api/tariffs");
+      const res = await api.get("/tariffs");
       setTariffs(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Failed to load tariffs", err);
@@ -320,15 +331,15 @@ export default function AdminTariffsPage() {
     setSaving(true);
     try {
       if (editing) {
-        await api.put(`/api/tariffs/${editing.id}`, payload);
+        await api.put(`/tariffs/${editing.id}`, payload);
         setOperationStatus({ type: "update", id: editing.id });
-        showFeedback(`✓ Tariff #${editing.id} updated successfully`, "success");
+        showFeedback(`✁ETariff #${editing.id} updated successfully`, "success");
         resetForm();
       } else {
-        const response = await api.post("/api/tariffs", payload);
+        const response = await api.post("/tariffs", payload);
         const newId = response.data?.id || "new";
         setOperationStatus({ type: "create", id: newId });
-        showFeedback(`✓ Tariff created successfully (ID: ${newId})`, "success");
+        showFeedback(`✁ETariff created successfully (ID: ${newId})`, "success");
         resetForm();
       }
       await loadTariffs();
@@ -337,7 +348,7 @@ export default function AdminTariffsPage() {
       const errorMsg =
         err?.formattedMessage || err?.response?.data?.message || "Save failed";
       setFormError(errorMsg);
-      showFeedback(`✗ ${errorMsg}`, "error");
+      showFeedback(`✁E${errorMsg}`, "error");
     } finally {
       setSaving(false);
     }
@@ -356,9 +367,9 @@ export default function AdminTariffsPage() {
     setDeletingId(tariff.id);
     setFormError(null);
     try {
-      await api.delete(`/api/tariffs/${tariff.id}`);
+      await api.delete(`/tariffs/${tariff.id}`);
       setOperationStatus({ type: "delete", id: tariff.id });
-      showFeedback(`✓ Tariff #${tariff.id} deleted successfully`, "success");
+      showFeedback(`✁ETariff #${tariff.id} deleted successfully`, "success");
       await loadTariffs();
       if (editing?.id === tariff.id) {
         resetForm();
@@ -370,7 +381,7 @@ export default function AdminTariffsPage() {
         err?.response?.data?.message ||
         "Delete failed";
       setFormError(errorMsg);
-      showFeedback(`✗ ${errorMsg}`, "error");
+      showFeedback(`✗${errorMsg}`, "error");
     } finally {
       setDeletingId(null);
     }
@@ -612,8 +623,7 @@ export default function AdminTariffsPage() {
                 }}
                 aria-label="Dismiss notification"
               >
-                ✕
-              </button>
+                ✕              </button>
             </motion.div>
           )}
         </AnimatePresence>

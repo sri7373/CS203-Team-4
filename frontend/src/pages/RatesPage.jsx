@@ -1,12 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import api from "../services/api.js";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import Select from "../components/Select.jsx";
-import {
-  COUNTRY_CODES,
-  PRODUCT_CATEGORY_CODES,
-} from "../constants/referenceOptions.js";
+import { PRODUCT_CATEGORY_CODES } from "../constants/referenceOptions.js";
+import { useReferenceOptions } from "../hooks/useReferenceOptions.js";
 
 export default function RatesPage() {
   const [origin, setOrigin] = useState("");
@@ -15,6 +13,44 @@ export default function RatesPage() {
   const [rows, setRows] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { countries, categories } = useReferenceOptions();
+
+  const countryOptions = useMemo(() => {
+    const base = countries && countries.length ? countries : [];
+    return [{ value: "", label: "(Any)" }, ...base];
+  }, [countries]);
+
+  const categoryOptions = useMemo(() => {
+    if (categories && categories.length) {
+      return [{ value: "", label: "(Any)" }, ...categories];
+    }
+    const fallback = PRODUCT_CATEGORY_CODES.map((value) => ({
+      value,
+      label: value,
+    }));
+    return [{ value: "", label: "(Any)" }, ...fallback];
+  }, [categories]);
+
+  useEffect(() => {
+    if (origin && !countryOptions.some((option) => option.value === origin)) {
+      setOrigin("");
+    }
+    if (
+      destination &&
+      !countryOptions.some((option) => option.value === destination)
+    ) {
+      setDestination("");
+    }
+  }, [countryOptions, origin, destination]);
+
+  useEffect(() => {
+    if (
+      category &&
+      !categoryOptions.some((option) => option.value === category)
+    ) {
+      setCategory("");
+    }
+  }, [categoryOptions, category]);
 
   const search = async (e) => {
     e?.preventDefault();
@@ -25,7 +61,7 @@ export default function RatesPage() {
       if (origin) params.set("origin", origin);
       if (destination) params.set("destination", destination);
       if (category) params.set("category", category);
-      const r = await api.get("/api/tariffs/rates?" + params.toString());
+      const r = await api.get("/tariffs/rates?" + params.toString());
       setRows(r.data);
     } catch (err) {
       setError(err?.response?.data || "Search failed");
@@ -65,7 +101,7 @@ export default function RatesPage() {
                 id="origin"
                 value={origin}
                 onChange={setOrigin}
-                options={COUNTRY_CODES}
+                options={countryOptions}
                 placeholder="(Any)"
               />
             </div>
@@ -75,7 +111,7 @@ export default function RatesPage() {
                 id="destination"
                 value={destination}
                 onChange={setDestination}
-                options={COUNTRY_CODES}
+                options={countryOptions}
                 placeholder="(Any)"
               />
             </div>
@@ -85,8 +121,7 @@ export default function RatesPage() {
                 id="category"
                 value={category}
                 onChange={setCategory}
-                options={PRODUCT_CATEGORY_CODES}
-                placeholder="(Any)"
+                options={categoryOptions}
               />
             </div>
           </div>

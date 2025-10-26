@@ -1,7 +1,10 @@
 import axios from 'axios'
 import { getToken } from './auth.js'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+// Use /api as baseURL for all environments
+// - In local dev (pnpm dev): axios will use http://localhost:5173/api which gets proxied by Vite
+// - In Docker: nginx proxies /api/ to backend:8080
+const API_BASE = '/api'
 
 export const api = axios.create({
   baseURL: API_BASE
