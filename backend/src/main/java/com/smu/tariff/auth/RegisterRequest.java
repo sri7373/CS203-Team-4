@@ -13,7 +13,7 @@ public class RegisterRequest {
     @Email @NotBlank
     public String email;
 
-    @NotBlank @Size(min = 6, max = 100)
+    @NotBlank @Size(min = 8, max = 100)
     public String password;
 
     public Role role = Role.USER;
