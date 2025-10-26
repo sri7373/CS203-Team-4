@@ -16,7 +16,11 @@ public class RegisterRequest {
     private String email;
 
     @NotBlank
-    @Size(min = 8, max = 20)
+    @Size(min = 8, max = 20, message = "Password must be between 8 and 20 characters long.")
+    @Pattern(
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,20}$",
+        message = "Password must contain at least one uppercase letter, one lowercase letter, and one special character."
+    )
     private String password;
 
     private Role role = Role.USER;
