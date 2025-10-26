@@ -623,7 +623,7 @@ export default function AdminTariffsPage() {
                 }}
                 aria-label="Dismiss notification"
               >
-                ✁E              </button>
+                ✕              </button>
             </motion.div>
           )}
         </AnimatePresence>
