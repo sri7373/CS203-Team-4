@@ -64,11 +64,11 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Email is taken");
         }
 
-        if (!PasswordValidator.isValid(request.password)) {
-            return ResponseEntity.badRequest().body(
-                "Password must be at least 8 characters long, include uppercase, lowercase, a digit, and a special character."
-            );
-        }
+        // if (!PasswordValidator.isValid(request.password)) {
+        //     return ResponseEntity.badRequest().body(
+        //         "Password must be 8 - 100 characters long, include uppercase, lowercase, a digit, and a special character."
+        //     );
+        // }
         Role role = request.role == null ? Role.USER : request.role;
         User user = new User(normalizedUsername, normalizedEmail,
                 passwordEncoder.encode(request.password), role);

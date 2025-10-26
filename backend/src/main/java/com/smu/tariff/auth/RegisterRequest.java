@@ -4,6 +4,7 @@ import com.smu.tariff.user.Role;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class RegisterRequest {
@@ -14,6 +15,10 @@ public class RegisterRequest {
     public String email;
 
     @NotBlank @Size(min = 8, max = 100)
+    @Pattern(
+        regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).*$",
+        message = "Password must include uppercase, lowercase, a digit, and a special character"
+    )
     public String password;
 
     public Role role = Role.USER;
