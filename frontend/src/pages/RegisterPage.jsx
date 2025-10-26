@@ -224,7 +224,7 @@ export default function RegisterPage() {
               role="alert"
               style={fieldErrorStyle}
             >
-              ⚠ Password {fieldErrors.password}
+              ⚠ {fieldErrors.password}
             </div>
           )}
         </div>
