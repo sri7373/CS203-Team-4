@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.smu.tariff.security.JwtService;
+import com.smu.tariff.security.util.PasswordValidator;
 import com.smu.tariff.user.Role;
 import com.smu.tariff.user.User;
 import com.smu.tariff.user.UserRepository;
@@ -61,6 +62,12 @@ public class AuthController {
         }
         if (userRepository.existsByEmail(normalizedEmail)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Email is taken");
+        }
+
+        if (!PasswordValidator.isValid(request.password)) {
+            return ResponseEntity.badRequest().body(
+                "Password must be at least 8 characters long, include uppercase, lowercase, a digit, and a special character."
+            );
         }
         Role role = request.role == null ? Role.USER : request.role;
         User user = new User(normalizedUsername, normalizedEmail,
