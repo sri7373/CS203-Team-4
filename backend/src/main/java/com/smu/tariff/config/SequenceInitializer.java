@@ -28,11 +28,11 @@ public class SequenceInitializer implements ApplicationRunner {
             long sequenceValue = (maxId == null || maxId < 1) ? 1L : maxId;
             boolean isCalled = maxId != null && maxId >= 1;
 
-            jdbcTemplate.execute(String.format(
-                "SELECT setval('tariff_rate_id_seq', %d, %s)",
+            jdbcTemplate.update(
+                "SELECT setval('tariff_rate_id_seq', ?, ?)",
                 sequenceValue,
-                Boolean.toString(isCalled)
-            ));
+                isCalled
+            );
             logger.info("tariff_rate_id_seq synchronized with value {}", sequenceValue);
         } catch (DataAccessException ex) {
             logger.warn(
