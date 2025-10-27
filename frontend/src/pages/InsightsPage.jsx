@@ -57,7 +57,7 @@ export default function InsightsPage() {
       // Add timeout to the request
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-      const response = await api.get("/api/trade/insights", {
+      const response = await api.get("/trade/insights", {
         params: { country },
         signal: controller.signal,
       });

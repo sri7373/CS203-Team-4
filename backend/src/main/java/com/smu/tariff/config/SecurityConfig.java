@@ -79,22 +79,17 @@ public class SecurityConfig {
 
             // equivalent to slide’s authorizeHttpRequests()
             .authorizeHttpRequests(auth -> auth
-
-                // allow browser preflight (OPTIONS) requests for CORS
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                // public endpoints (permitAll corresponds to slide)
-                .requestMatchers(
-                        "/",                       // root
-                        "/api/auth/**",            // login, register endpoints
-                        "/api/trade/**",           // open data
-                        "/v3/api-docs/**",         // Swagger/OpenAPI
-                        "/swagger-ui/**",
-                        "/swagger-ui.html"
-                ).permitAll()
-
-                // all other endpoints require authentication (authenticated() from slide)
-                .anyRequest().authenticated()
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers(
+                            "/",
+                            "/api/auth/**",
+                            "/api/trade/**",
+                            "/v3/api-docs/**",
+                            "/swagger-ui/**",
+                            "/swagger-ui.html",
+                            "/actuator/**"
+                    ).permitAll()
+                    .anyRequest().authenticated()
             )
 
             .httpBasic(Customizer.withDefaults())
