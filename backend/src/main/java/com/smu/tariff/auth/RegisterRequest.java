@@ -14,12 +14,12 @@ public class RegisterRequest {
     @Email @NotBlank
     public String email;
 
-    @NotBlank //@Size(min = 8, max = 100)
-    @Pattern(
-        regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).{8,100}$",
-        message = "Password must be at least 8 characters, and include uppercase, lowercase, a digit, and a special character"
-    )
+    @NotBlank @Size(min = 8, max = 100)
     public String password;
+    // @Pattern(
+    //     regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).{8,100}$",
+    //     message = "Password must be at least 8 characters, and include uppercase, lowercase, a digit, and a special character"
+    // )
 
     public Role role = Role.USER;
 }
