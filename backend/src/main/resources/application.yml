@@ -3,16 +3,18 @@ server:
 
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/postgres}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    url: jdbc:postgresql://aws-csd-db.cpa8somwae85.ap-southeast-1.rds.amazonaws.com:5432/tariff
+    username: postgres
+    password: lordshiva15_SRI
     driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
     properties:
       hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
           lob:
             non_contextual_creation: true
@@ -42,3 +44,8 @@ newsdata:
   api:
     key: ${NEWSDATA_API_KEY:}
 # Swagger UI path: http://localhost:8080/swagger-ui/index.html
+mtech:
+  api:
+    base-url: "https://mtech-api.com/client/api"
+    token: "pwMg3dtmiOyT0qew3XLt4aB9kmShj1Zn"
+# API link: https://moaah.com/api-doc
