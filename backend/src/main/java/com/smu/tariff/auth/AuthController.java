@@ -66,7 +66,6 @@ public class AuthController {
         User user = new User(normalizedUsername, normalizedEmail,
                 passwordEncoder.encode(request.password), role);
         userRepository.save(user);
-        String token = jwtService.generateToken(user);
-        return ResponseEntity.ok(new AuthResponse(token, user.getUsername(), user.getRole().name()));
+        return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully. Please login to proceed.");
     }
 }
