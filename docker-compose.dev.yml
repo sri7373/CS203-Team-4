@@ -44,11 +44,13 @@ services:
     container_name: tariff_backend_dev
     restart: unless-stopped
     environment:
-      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
-      DB_USERNAME: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-AIzaSyCxgqgrYbMCQs9178XiPkabKLKkMGi9q-g}
+      NEWSDATA_API_KEY: ${NEWSDATA_API_KEY:-pub_7713507262314bd18c0fb64c8536c7bc}
     ports:
       - "8080:8080"
     depends_on:
@@ -67,7 +69,7 @@ services:
     container_name: tariff_frontend_dev
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "8081:80"
     depends_on:
       - backend
     networks:

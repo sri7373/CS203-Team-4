@@ -60,7 +60,7 @@ export default function RegisterPage() {
     setFieldErrors({});
     setLoading(true);
     try {
-      const res = await api.post("/api/auth/register", {
+      const res = await api.post("/auth/register", {
         username,
         email,
         password,
@@ -171,11 +171,7 @@ export default function RegisterPage() {
             }
           />
           {fieldErrors.username && (
-            <div
-              id="username-error"
-              role="alert"
-              style={fieldErrorStyle}
-            >
+            <div id="username-error" role="alert" style={fieldErrorStyle}>
               ⚠ Username {fieldErrors.username}
             </div>
           )}
@@ -194,11 +190,7 @@ export default function RegisterPage() {
             aria-describedby={fieldErrors.email ? "email-error" : undefined}
           />
           {fieldErrors.email && (
-            <div
-              id="email-error"
-              role="alert"
-              style={fieldErrorStyle}
-            >
+            <div id="email-error" role="alert" style={fieldErrorStyle}>
               ⚠ Email {fieldErrors.email}
             </div>
           )}
@@ -219,11 +211,7 @@ export default function RegisterPage() {
             }
           />
           {fieldErrors.password && (
-            <div
-              id="password-error"
-              role="alert"
-              style={fieldErrorStyle}
-            >
+            <div id="password-error" role="alert" style={fieldErrorStyle}>
               ⚠ Password {fieldErrors.password}
             </div>
           )}

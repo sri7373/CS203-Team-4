@@ -7,7 +7,7 @@ let cache = {
 
 export async function fetchCountries() {
   if (!cache.countries) {
-    const res = await api.get('/api/reference/countries')
+    const res = await api.get('/reference/countries')
     cache.countries = Array.isArray(res.data) ? res.data : []
   }
   return cache.countries
@@ -15,7 +15,7 @@ export async function fetchCountries() {
 
 export async function fetchProductCategories() {
   if (!cache.categories) {
-    const res = await api.get('/api/reference/product-categories')
+    const res = await api.get('/reference/product-categories')
     cache.categories = Array.isArray(res.data) ? res.data : []
   }
   return cache.categories
