@@ -83,7 +83,7 @@ public class ProductCategorySyncService {
             ProductCategory pc = existing.get();
             // Update only hs_code and weight_based
             pc.setHsCode(dto.getHsCode());
-            pc.setWeightBased(Boolean.valueOf(dto.isWeightBased()));
+            pc.setWeightBased(dto.isWeightBased());
             repository.save(pc);
             log.debug("Updated category {}: hs_code={}, weight_based={}", code, dto.getHsCode(), dto.isWeightBased());
         } else {
