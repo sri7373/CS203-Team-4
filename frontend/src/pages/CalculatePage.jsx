@@ -9,7 +9,6 @@ import {
   DEFAULT_DESTINATION_CODE,
   DEFAULT_ORIGIN_CODE,
   DEFAULT_PRODUCT_CATEGORY,
-  PRODUCT_CATEGORY_CODES,
 } from "../constants/referenceOptions.js";
 
 export default function CalculatePage() {
@@ -19,10 +18,7 @@ export default function CalculatePage() {
     [countries]
   );
   const categoryOptions = useMemo(
-    () =>
-      categories && categories.length
-        ? categories
-        : PRODUCT_CATEGORY_CODES.map((value) => ({ value, label: value })),
+    () => (categories && categories.length ? categories : []),
     [categories]
   );
   const [origin, setOrigin] = useState(DEFAULT_ORIGIN_CODE || "");
