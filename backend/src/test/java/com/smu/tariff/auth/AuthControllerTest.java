@@ -283,12 +283,12 @@ class AuthControllerTest {
                 """;
 
         // Act & Assert: Should return 400 Bad Request
-        mockMvc.perform(post("/api/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(registerRequest))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string(containsString("email")))
-                .andExpect(content().string(containsString("well-formed")));
+    mockMvc.perform(post("/api/auth/register")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(registerRequest))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().string(containsString("email")))
+        .andExpect(content().string(containsString("blank")));
     }
 
     @Test

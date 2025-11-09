@@ -10,6 +10,7 @@ import com.smu.tariff.repository.TariffRateRepository;
 import com.smu.tariff.user.Role;
 import com.smu.tariff.user.User;
 import com.smu.tariff.user.UserRepository;
+import com.smu.tariff.security.JwtService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,12 +64,16 @@ class CalculateTariffControllerTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
+    private JwtService jwtService;
+
+    @Autowired
     private Environment environment;
 
     private Country singapore;
     private Country usa;
     private ProductCategory electronics;
     private ProductCategory textiles;
+    private String token;
 
     @BeforeEach
     void setUp() {
@@ -111,6 +116,8 @@ class CalculateTariffControllerTest {
                 passwordEncoder.encode("password123"),
                 Role.USER);
         userRepository.save(testUser);
+    // generate JWT for authenticated requests
+    token = jwtService.generateToken(testUser);
 
         // Create tariff rates
         createTariffRate(singapore, usa, electronics, 5.0, 10.0);
@@ -144,9 +151,10 @@ class CalculateTariffControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/calculate-tariff")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+    mockMvc.perform(post("/api/calculate-tariff")
+        .header("Authorization", "Bearer " + token)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(request))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productCode", equalTo("ELEC")))
                 .andExpect(jsonPath("$.hsCode", equalTo("85")))
@@ -167,9 +175,10 @@ class CalculateTariffControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/calculate-tariff")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+    mockMvc.perform(post("/api/calculate-tariff")
+        .header("Authorization", "Bearer " + token)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(request))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productCode", equalTo("TEXT")))
                 .andExpect(jsonPath("$.weightBased", equalTo(true)))
@@ -189,9 +198,10 @@ class CalculateTariffControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/calculate-tariff")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+    mockMvc.perform(post("/api/calculate-tariff")
+        .header("Authorization", "Bearer " + token)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(request))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productCode", equalTo("ELEC")))
                 .andExpect(jsonPath("$.weightBased", equalTo(false)))
@@ -210,9 +220,10 @@ class CalculateTariffControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/calculate-tariff")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+    mockMvc.perform(post("/api/calculate-tariff")
+        .header("Authorization", "Bearer " + token)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("declaredValue")));
     }
@@ -228,9 +239,10 @@ class CalculateTariffControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/calculate-tariff")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+    mockMvc.perform(post("/api/calculate-tariff")
+        .header("Authorization", "Bearer " + token)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("declaredValue")));
     }
@@ -246,9 +258,10 @@ class CalculateTariffControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/calculate-tariff")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+    mockMvc.perform(post("/api/calculate-tariff")
+        .header("Authorization", "Bearer " + token)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("declaredValue")));
     }
@@ -264,9 +277,10 @@ class CalculateTariffControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/calculate-tariff")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+    mockMvc.perform(post("/api/calculate-tariff")
+        .header("Authorization", "Bearer " + token)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Weight")));
     }
@@ -283,9 +297,10 @@ class CalculateTariffControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/calculate-tariff")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+    mockMvc.perform(post("/api/calculate-tariff")
+        .header("Authorization", "Bearer " + token)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Weight")));
     }
@@ -302,9 +317,10 @@ class CalculateTariffControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/calculate-tariff")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+    mockMvc.perform(post("/api/calculate-tariff")
+        .header("Authorization", "Bearer " + token)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Weight")));
     }
@@ -320,9 +336,10 @@ class CalculateTariffControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/calculate-tariff")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+    mockMvc.perform(post("/api/calculate-tariff")
+        .header("Authorization", "Bearer " + token)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Unknown product code")));
     }
@@ -338,9 +355,10 @@ class CalculateTariffControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/calculate-tariff")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+    mockMvc.perform(post("/api/calculate-tariff")
+        .header("Authorization", "Bearer " + token)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("country")));
     }
@@ -353,9 +371,10 @@ class CalculateTariffControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/calculate-tariff")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(request))
+    mockMvc.perform(post("/api/calculate-tariff")
+        .header("Authorization", "Bearer " + token)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(request))
                 .andExpect(status().isBadRequest());
     }
 }

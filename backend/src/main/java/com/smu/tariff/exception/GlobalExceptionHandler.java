@@ -13,6 +13,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -70,6 +71,29 @@ public class GlobalExceptionHandler {
             HttpStatus.BAD_REQUEST.value(),
             "Validation Error",
             message,
+            request.getDescription(false).replace("uri=", "")
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingServletRequestParameter(MissingServletRequestParameterException ex, WebRequest request) {
+        logger.warn("Missing request parameter: {}", ex.getParameterName());
+
+        String userMessage;
+        // provide a friendly message for the 'country' parameter which is commonly used
+        if ("country".equals(ex.getParameterName())) {
+            userMessage = "Country code is required";
+        } else {
+            userMessage = "Required request parameter '" + ex.getParameterName() + "' is missing";
+        }
+
+        ErrorResponse error = new ErrorResponse(
+            Instant.now(),
+            HttpStatus.BAD_REQUEST.value(),
+            "Bad Request",
+            userMessage,
             request.getDescription(false).replace("uri=", "")
         );
 

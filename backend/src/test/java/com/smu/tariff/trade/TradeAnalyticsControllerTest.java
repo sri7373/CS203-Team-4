@@ -3,6 +3,7 @@ package com.smu.tariff.trade;
 import com.smu.tariff.country.Country;
 import com.smu.tariff.country.CountryRepository;
 import com.smu.tariff.model.ProductCategory;
+import com.smu.tariff.repository.ProductCategoryRepository;
 import com.smu.tariff.model.TariffRate;
 import com.smu.tariff.repository.TariffRateRepository;
 import com.smu.tariff.user.Role;
@@ -49,6 +50,9 @@ class TradeAnalyticsControllerTest {
     private TariffRateRepository tariffRateRepository;
 
     @Autowired
+    private ProductCategoryRepository productCategoryRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -86,19 +90,21 @@ class TradeAnalyticsControllerTest {
         usa = countryRepository.save(new Country("USA", "United States"));
         japan = countryRepository.save(new Country("JPN", "Japan"));
 
-        electronics = new ProductCategory();
+    electronics = new ProductCategory();
         electronics.setCode("ELEC");
         electronics.setName("Electronics");
         electronics.setHsCode("85");
         electronics.setWeightBased(false);
+    productCategoryRepository.save(electronics);
 
-        food = new ProductCategory();
+    food = new ProductCategory();
         food.setCode("FOOD");
         food.setName("Food & Beverages");
         food.setHsCode("04");
         food.setWeightBased(false);
+    productCategoryRepository.save(food);
 
-        // Create test user
+    // Create test user
         User testUser = new User(
                 "testuser",
                 "test@example.com",
