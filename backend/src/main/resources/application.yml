@@ -44,8 +44,3 @@ newsdata:
   api:
     key: ${NEWSDATA_API_KEY:}
 # Swagger UI path: http://localhost:8080/swagger-ui/index.html
-mtech:
-  api:
-    base-url: "https://mtech-api.com/client/api"
-    token: "pwMg3dtmiOyT0qew3XLt4aB9kmShj1Zn"
-# API link: https://moaah.com/api-doc

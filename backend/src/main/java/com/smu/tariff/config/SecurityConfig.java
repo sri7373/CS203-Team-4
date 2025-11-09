@@ -72,20 +72,7 @@ public class SecurityConfig {
                             "/v3/api-docs/**",
                             "/swagger-ui/**",
                             "/swagger-ui.html",
-                            "/actuator/**",
-                            "/import-mtech-data",
-                            "/import-fta-data",
-                            "/import-hybrid-data",
-                            "/quick-populate",
-                            "/test-fta-api",
-                            "/delete-zero-rates",
-                            "/debug-database",
-                            "/debug-db-state",
-                            "/debug-tariff-rates",
-                            "/populate-hs-codes",
-                            "/check-tariff-data",
-                            "/test-api-call",
-                            "/diagnose-json"
+                            "/actuator/**"
                     ).permitAll()
                     .anyRequest().authenticated()
             )

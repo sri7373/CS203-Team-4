@@ -23,108 +23,16 @@ public class ProductCategorySyncService {
     private final ProductCategoryRepository repository;
     private final RestTemplate restTemplate;
     private final String apiUrl;
-    private final String mtechBaseUrl;
-    private final String mtechToken;
 
     public ProductCategorySyncService(ProductCategoryRepository repository,
                                       RestTemplateBuilder restTemplateBuilder,
-                                      @Value("${simplyduty.api.url:https://api.simplyduty.com/categories}") String apiUrl,
-                                      @Value("${mtech.api.base-url:https://mtech-api.com/client/api}") String mtechBaseUrl,
-                                      @Value("${mtech.api.token:}") String mtechToken) {
+                                      @Value("${simplyduty.api.url:https://api.simplyduty.com/categories}") String apiUrl) {
         this.repository = repository;
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(Duration.ofSeconds(5))
                 .setReadTimeout(Duration.ofSeconds(20))
                 .build();
         this.apiUrl = apiUrl;
-        this.mtechBaseUrl = mtechBaseUrl;
-        this.mtechToken = mtechToken;
-    }
-
-    /**
-     * Fetch HS code suggestion from MTech API for a given category/product pair.
-     * Returns a ProductCategoryDto with hsCode populated when available.
-     */
-    public ProductCategoryDto fetchHsCode(String category, String product) {
-        if (mtechBaseUrl == null || mtechBaseUrl.isBlank() || mtechToken == null || mtechToken.isBlank()) {
-            log.warn("MTech API base URL or token is not configured");
-            return null;
-        }
-
-        try {
-            String url = String.format("%s/hs-code-match?category=%s&product=%s&token=%s",
-                    mtechBaseUrl,
-                    encodeParam(category),
-                    encodeParam(product),
-                    encodeParam(mtechToken));
-
-            ResponseEntity<MtechHsMatchResponse> resp = restTemplate.getForEntity(url, MtechHsMatchResponse.class);
-            MtechHsMatchResponse body = resp.getBody();
-            if (body == null || body.getData() == null || body.getData().getSixDigitCodes() == null || body.getData().getSixDigitCodes().length == 0) {
-                log.info("No HS code returned for category='{}' product='{}'", category, product);
-                return null;
-            }
-
-            MtechHsCodeEntry entry = body.getData().getSixDigitCodes()[0];
-            ProductCategoryDto dto = new ProductCategoryDto();
-            dto.setCode(category);
-            dto.setName(product);
-            dto.setHsCode(entry.getSixDigitCode());
-            // weightBased unknown here, leave false
-            dto.setWeightBased(false);
-            return dto;
-        } catch (RestClientException ex) {
-            log.error("Failed to call MTech hs-code-match API", ex);
-            throw ex;
-        }
-    }
-
-    /**
-     * Fetch import duty details from MTech API for given HS code and origin/destination.
-     */
-    public ImportDutyDto fetchImportDuty(String hscode, String originCountry, String destCountry) {
-        if (mtechBaseUrl == null || mtechBaseUrl.isBlank() || mtechToken == null || mtechToken.isBlank()) {
-            log.warn("MTech API base URL or token is not configured");
-            return null;
-        }
-
-        try {
-            String url = String.format("%s/import-duty?hscode=%s&origin_country=%s&dest_country=%s&token=%s",
-                    mtechBaseUrl,
-                    encodeParam(hscode),
-                    encodeParam(originCountry),
-                    encodeParam(destCountry),
-                    encodeParam(mtechToken));
-
-            ResponseEntity<MtechImportDutyResponse> resp = restTemplate.getForEntity(url, MtechImportDutyResponse.class);
-            MtechImportDutyResponse body = resp.getBody();
-            if (body == null || body.getData() == null) {
-                log.info("No import duty data for hscode='{}'", hscode);
-                return null;
-            }
-
-            MtechImportDutyResponse.Data d = body.getData();
-            ImportDutyDto dto = new ImportDutyDto();
-            dto.setHscode(hscode);
-            dto.setOriginCountry(originCountry);
-            dto.setDestCountry(destCountry);
-            dto.setBaseRate(d.getBaseRate());
-            dto.setAdditionalFee(d.getAdditionalFee());
-            dto.setFtaRate(d.getFtaRate());
-            dto.setTotalDuty(d.getTotalDuty());
-            return dto;
-        } catch (RestClientException ex) {
-            log.error("Failed to call MTech import-duty API", ex);
-            throw ex;
-        }
-    }
-
-    private String encodeParam(String s) {
-        try {
-            return java.net.URLEncoder.encode(s == null ? "" : s, java.nio.charset.StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            return "";
-        }
     }
 
     /**

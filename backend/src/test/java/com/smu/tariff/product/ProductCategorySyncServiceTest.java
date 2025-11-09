@@ -38,7 +38,7 @@ class ProductCategorySyncServiceTest {
         when(restTemplateBuilder.setReadTimeout(any())).thenReturn(restTemplateBuilder);
         when(restTemplateBuilder.build()).thenReturn(restTemplate);
 
-        service = new ProductCategorySyncService(repository, restTemplateBuilder, "http://example/api/categories", "http://mtech-api.com/client/api", "token-abc-123");
+        service = new ProductCategorySyncService(repository, restTemplateBuilder, "http://example/api/categories");
     }
 
     @Test
