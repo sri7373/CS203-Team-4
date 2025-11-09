@@ -12,8 +12,10 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
+@ActiveProfiles("test")
 class SchemaVerificationTest {
 
     @Autowired
@@ -21,12 +23,12 @@ class SchemaVerificationTest {
 
     @Test
     void queryLogTableContainsResultAndRouteColumns() throws Exception {
-        Set<String> expected = Set.of("result", "origin_country", "destination_country");
+        Set<String> expected = Set.of("RESULT", "ORIGIN_COUNTRY", "DESTINATION_COUNTRY");
         Set<String> found = new HashSet<>();
 
         try (ResultSet rs = dataSource.getConnection()
                 .getMetaData()
-                .getColumns(null, null, "query_log", null)) {
+                .getColumns(null, null, "QUERY_LOG", null)) {
             while (rs.next()) {
                 String column = rs.getString("COLUMN_NAME");
                 if (expected.contains(column)) {

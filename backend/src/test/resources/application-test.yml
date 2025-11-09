@@ -11,9 +11,10 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+    defer-datasource-initialization: true
   sql:
     init:
-      mode: always
+      mode: never
 
 app:
   jwt:
@@ -23,3 +24,8 @@ app:
 gemini:
   api:
     key: AIzaSyCxgqgrYbMCQs9178XiPkabKLKkMGi9q-g
+
+logging:
+  level:
+    root: INFO
+    com.smu.tariff: DEBUG

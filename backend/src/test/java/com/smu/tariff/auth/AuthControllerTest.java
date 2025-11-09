@@ -203,7 +203,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(registerRequest))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.token", notNullValue()))
                 .andExpect(jsonPath("$.username", equalTo("newuser")))
@@ -273,7 +273,7 @@ class AuthControllerTest {
 
     @Test
     void register_ShouldReturn400_WhenEmailIsBlank() throws Exception {
-        // Arrange: Blank email
+        // Arrange: Blank email (whitespace is invalid email format)
         String registerRequest = """
                 {
                     "username": "testuser",
@@ -306,7 +306,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(registerRequest))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.role", equalTo("USER")));
 
         // Verify role in database
@@ -329,7 +329,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(registerRequest))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
 
         // Assert: Email should be stored in lowercase
         User createdUser = userRepository.findByUsername("caseuser").orElseThrow();
@@ -381,7 +381,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(registerRequest))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
 
         // Assert: Password should be hashed, not stored as plain text
         User createdUser = userRepository.findByUsername("hashtest").orElseThrow();
@@ -421,7 +421,7 @@ class AuthControllerTest {
         String responseContent = mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(registerRequest))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();

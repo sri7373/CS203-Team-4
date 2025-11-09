@@ -1,56 +1,48 @@
 -- Test data for integration tests
 -- This file is loaded into H2 database before each test
--- Using simple INSERT with subqueries to avoid duplicates
+-- Simple INSERT statements (tests are transactional and rolled back)
 
--- Insert test countries (only if not exists)
-INSERT INTO countries (code, name) 
-SELECT 'SGP', 'Singapore' WHERE NOT EXISTS (SELECT 1 FROM countries WHERE code = 'SGP');
+-- Insert test countries
+INSERT INTO country (code, name) VALUES ('SGP', 'Singapore');
+INSERT INTO country (code, name) VALUES ('USA', 'United States');
+INSERT INTO country (code, name) VALUES ('JPN', 'Japan');
 
-INSERT INTO countries (code, name) 
-SELECT 'USA', 'United States' WHERE NOT EXISTS (SELECT 1 FROM countries WHERE code = 'USA');
+-- Insert test product categories
+INSERT INTO product_category (code, name, weight_based) VALUES ('ELEC', 'Electronics', false);
+INSERT INTO product_category (code, name, weight_based) VALUES ('FOOD', 'Food & Beverages', false);
+INSERT INTO product_category (code, name, weight_based) VALUES ('TEXT', 'Textiles', false);
 
-INSERT INTO countries (code, name) 
-SELECT 'JPN', 'Japan' WHERE NOT EXISTS (SELECT 1 FROM countries WHERE code = 'JPN');
-
--- Insert test product categories (only if not exists)
-INSERT INTO product_categories (code, name, description) 
-SELECT 'ELEC', 'Electronics', 'Electronic goods' WHERE NOT EXISTS (SELECT 1 FROM product_categories WHERE code = 'ELEC');
-
-INSERT INTO product_categories (code, name, description) 
-SELECT 'FOOD', 'Food & Beverages', 'Food products' WHERE NOT EXISTS (SELECT 1 FROM product_categories WHERE code = 'FOOD');
-
-INSERT INTO product_categories (code, name, description) 
-SELECT 'TEXT', 'Textiles', 'Textile products' WHERE NOT EXISTS (SELECT 1 FROM product_categories WHERE code = 'TEXT');
-
--- Insert test tariff rates (only if not exists)
-INSERT INTO tariff_rates (origin_country_id, destination_country_id, product_category_id, base_rate, additional_fee, effective_date, expiry_date)
+-- Insert test tariff rates
+INSERT INTO tariff_rate (origin_id, destination_id, product_category_id, base_rate, additional_fee, weight_value, effective_from, effective_to)
 SELECT 
-    (SELECT id FROM countries WHERE code = 'SGP'),
-    (SELECT id FROM countries WHERE code = 'USA'),
-    (SELECT id FROM product_categories WHERE code = 'ELEC'),
+    (SELECT id FROM country WHERE code = 'SGP'),
+    (SELECT id FROM country WHERE code = 'USA'),
+    (SELECT id FROM product_category WHERE code = 'ELEC'),
     5.0,
     10.0,
+    0.0,
     CURRENT_DATE,
     DATEADD('YEAR', 1, CURRENT_DATE)
 WHERE NOT EXISTS (
-    SELECT 1 FROM tariff_rates tr
-    WHERE tr.origin_country_id = (SELECT id FROM countries WHERE code = 'SGP')
-    AND tr.destination_country_id = (SELECT id FROM countries WHERE code = 'USA')
-    AND tr.product_category_id = (SELECT id FROM product_categories WHERE code = 'ELEC')
+    SELECT 1 FROM tariff_rate tr
+    WHERE tr.origin_id = (SELECT id FROM country WHERE code = 'SGP')
+    AND tr.destination_id = (SELECT id FROM country WHERE code = 'USA')
+    AND tr.product_category_id = (SELECT id FROM product_category WHERE code = 'ELEC')
 );
 
-INSERT INTO tariff_rates (origin_country_id, destination_country_id, product_category_id, base_rate, additional_fee, effective_date, expiry_date)
+INSERT INTO tariff_rate (origin_id, destination_id, product_category_id, base_rate, additional_fee, weight_value, effective_from, effective_to)
 SELECT 
-    (SELECT id FROM countries WHERE code = 'USA'),
-    (SELECT id FROM countries WHERE code = 'JPN'),
-    (SELECT id FROM product_categories WHERE code = 'FOOD'),
+    (SELECT id FROM country WHERE code = 'USA'),
+    (SELECT id FROM country WHERE code = 'JPN'),
+    (SELECT id FROM product_category WHERE code = 'FOOD'),
     3.0,
     5.0,
+    0.0,
     CURRENT_DATE,
     DATEADD('YEAR', 1, CURRENT_DATE)
 WHERE NOT EXISTS (
-    SELECT 1 FROM tariff_rates tr
-    WHERE tr.origin_country_id = (SELECT id FROM countries WHERE code = 'USA')
-    AND tr.destination_country_id = (SELECT id FROM countries WHERE code = 'JPN')
-    AND tr.product_category_id = (SELECT id FROM product_categories WHERE code = 'FOOD')
+    SELECT 1 FROM tariff_rate tr
+    WHERE tr.origin_id = (SELECT id FROM country WHERE code = 'USA')
+    AND tr.destination_id = (SELECT id FROM country WHERE code = 'JPN')
+    AND tr.product_category_id = (SELECT id FROM product_category WHERE code = 'FOOD')
 );

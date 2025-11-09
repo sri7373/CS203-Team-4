@@ -1,6 +1,12 @@
 package com.smu.tariff;
 
-import com.smu.tariff.tariff.TariffRateRepository;
+import com.smu.tariff.country.Country;
+import com.smu.tariff.country.CountryRepository;
+import com.smu.tariff.logging.QueryLogRepository;
+import com.smu.tariff.model.ProductCategory;
+import com.smu.tariff.model.TariffRate;
+import com.smu.tariff.repository.ProductCategoryRepository;
+import com.smu.tariff.repository.TariffRateRepository;
 import com.smu.tariff.user.Role;
 import com.smu.tariff.user.User;
 import com.smu.tariff.user.UserRepository;
@@ -15,7 +21,9 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.jdbc.Sql;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
@@ -35,7 +43,6 @@ import static org.hamcrest.Matchers.*;
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Sql(scripts = "/test-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 class TariffControllerIntegrationTest {
 
     @LocalServerPort
@@ -46,9 +53,18 @@ class TariffControllerIntegrationTest {
 
     @Autowired
     private TariffRateRepository tariffRateRepository;
+    
+    @Autowired
+    private CountryRepository countryRepository;
+    
+    @Autowired
+    private ProductCategoryRepository productCategoryRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    
+    @Autowired
+    private QueryLogRepository queryLogRepository;
 
     private String userJwtToken;
     private String adminJwtToken;
@@ -58,10 +74,16 @@ class TariffControllerIntegrationTest {
         RestAssured.port = port;
         RestAssured.baseURI = "http://localhost";
 
-        // Clear test data if needed (be careful with this in production)
-        // Note: Uncomment if you want to clear data between tests
-        // tariffRateRepository.deleteAll();
-        // userRepository.deleteAll();
+        // Clear database before each test to avoid constraint violations
+        // Delete in correct order to respect foreign key constraints
+        queryLogRepository.deleteAll();  // Delete first because it references users
+        tariffRateRepository.deleteAll();
+        productCategoryRepository.deleteAll();
+        countryRepository.deleteAll();
+        userRepository.deleteAll();
+
+        // Setup test data in H2 database (not AWS!)
+        setupTestData();
 
         // Create test users if they don't exist
         setupTestUsers();
@@ -69,6 +91,70 @@ class TariffControllerIntegrationTest {
         // Authenticate and extract JWT tokens
         userJwtToken = authenticateAndGetToken("testuser", "password123");
         adminJwtToken = authenticateAndGetToken("testadmin", "admin123");
+    }
+    
+    private void setupTestData() {
+        // Create test countries if they don't exist
+        Country singapore = countryRepository.findByCode("SGP")
+            .orElseGet(() -> {
+                Country country = new Country();
+                country.setCode("SGP");
+                country.setName("Singapore");
+                return countryRepository.save(country);
+            });
+            
+        Country usa = countryRepository.findByCode("USA")
+            .orElseGet(() -> {
+                Country country = new Country();
+                country.setCode("USA");
+                country.setName("United States");
+                return countryRepository.save(country);
+            });
+            
+        Country japan = countryRepository.findByCode("JPN")
+            .orElseGet(() -> {
+                Country country = new Country();
+                country.setCode("JPN");
+                country.setName("Japan");
+                return countryRepository.save(country);
+            });
+        
+        // Create test product categories if they don't exist (using constructor without description)
+        ProductCategory electronics = productCategoryRepository.findByCode("ELEC")
+            .orElseGet(() -> productCategoryRepository.save(new ProductCategory("ELEC", "Electronics")));
+            
+        ProductCategory food = productCategoryRepository.findByCode("FOOD")
+            .orElseGet(() -> productCategoryRepository.save(new ProductCategory("FOOD", "Food & Beverages")));
+            
+        ProductCategory textiles = productCategoryRepository.findByCode("TEXT")
+            .orElseGet(() -> productCategoryRepository.save(new ProductCategory("TEXT", "Textiles")));
+        
+        // Create test tariff rates
+        // Note: H2 database is fresh for each test, so we can safely create without checking existence
+        
+        // SGP -> USA, Electronics: 5% + $10
+        TariffRate rate1 = new TariffRate(
+            singapore, 
+            usa, 
+            electronics,
+            BigDecimal.valueOf(5.0),
+            BigDecimal.valueOf(10.0),
+            LocalDate.now(),
+            LocalDate.now().plusYears(1)
+        );
+        tariffRateRepository.save(rate1);
+        
+        // USA -> JPN, Food: 3% + $5
+        TariffRate rate2 = new TariffRate(
+            usa,
+            japan,
+            food,
+            BigDecimal.valueOf(3.0),
+            BigDecimal.valueOf(5.0),
+            LocalDate.now(),
+            LocalDate.now().plusYears(1)
+        );
+        tariffRateRepository.save(rate2);
     }
 
     private void setupTestUsers() {
@@ -133,14 +219,14 @@ class TariffControllerIntegrationTest {
             }
             """;
 
-        // When: POST request is made to /api/tariff/calculate
+        // When: POST request is made to /api/tariffs/calculate
         // Then: Should return 200 OK with valid response structure
         given()
             .header("Authorization", "Bearer " + userJwtToken)
             .contentType(ContentType.JSON)
             .body(requestBody)
         .when()
-            .post("/api/tariff/calculate")
+            .post("/api/tariffs/calculate")
         .then()
             .statusCode(200)
             .contentType(ContentType.JSON)
@@ -173,7 +259,7 @@ class TariffControllerIntegrationTest {
             .contentType(ContentType.JSON)
             .body(requestBody)
         .when()
-            .post("/api/tariff/calculate")
+            .post("/api/tariffs/calculate")
         .then()
             .statusCode(400);
     }
@@ -197,7 +283,7 @@ class TariffControllerIntegrationTest {
             .contentType(ContentType.JSON)
             .body(requestBody)
         .when()
-            .post("/api/tariff/calculate")
+            .post("/api/tariffs/calculate")
         .then()
             .statusCode(400);
     }
@@ -221,7 +307,7 @@ class TariffControllerIntegrationTest {
             .contentType(ContentType.JSON)
             .body(requestBody)
         .when()
-            .post("/api/tariff/calculate")
+            .post("/api/tariffs/calculate")
         .then()
             .statusCode(400);
     }
@@ -229,7 +315,7 @@ class TariffControllerIntegrationTest {
     @Test
     void searchTariffs_ShouldReturnResults_WhenValidFiltersProvided() {
         // Given: Valid search parameters
-        // When: GET request is made to /api/tariff/search with filters
+        // When: GET request is made to /api/tariffs/rates with filters
         // Then: Should return 200 OK with array of results
         given()
             .header("Authorization", "Bearer " + userJwtToken)
@@ -237,7 +323,7 @@ class TariffControllerIntegrationTest {
             .queryParam("destination", "USA")
             .queryParam("category", "ELEC")
         .when()
-            .get("/api/tariff/search")
+            .get("/api/tariffs/rates")
         .then()
             .statusCode(200)
             .contentType(ContentType.JSON)
@@ -252,7 +338,7 @@ class TariffControllerIntegrationTest {
         given()
             .header("Authorization", "Bearer " + userJwtToken)
         .when()
-            .get("/api/tariff/search")
+            .get("/api/tariffs/rates")
         .then()
             .statusCode(200)
             .contentType(ContentType.JSON)
@@ -376,7 +462,7 @@ class TariffControllerIntegrationTest {
             .header("Origin", "http://localhost:3000")
             .header("Access-Control-Request-Method", "POST")
         .when()
-            .options("/api/tariff/calculate")
+            .options("/api/tariffs/calculate")
         .then()
             .statusCode(anyOf(is(200), is(204)))
             .header("Access-Control-Allow-Origin", notNullValue());

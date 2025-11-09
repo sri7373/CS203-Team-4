@@ -62,10 +62,17 @@ public class AuthController {
         if (userRepository.existsByEmail(normalizedEmail)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Email is taken");
         }
+        
         Role role = request.role == null ? Role.USER : request.role;
         User user = new User(normalizedUsername, normalizedEmail,
                 passwordEncoder.encode(request.password), role);
         userRepository.save(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully. Please login to proceed.");
+        
+        // Generate JWT token for the newly registered user
+        String token = jwtService.generateToken(user);
+        
+        // Return JSON response with token, username, and role
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new AuthResponse(token, user.getUsername(), user.getRole().name()));
     }
 }
