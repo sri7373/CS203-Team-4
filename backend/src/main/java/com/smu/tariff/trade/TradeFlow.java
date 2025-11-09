@@ -1,7 +1,7 @@
 package com.smu.tariff.trade;
 
 import com.smu.tariff.country.Country;
-import com.smu.tariff.product.ProductCategory;
+import com.smu.tariff.model.ProductCategory;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
