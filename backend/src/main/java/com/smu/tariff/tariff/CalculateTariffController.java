@@ -56,8 +56,10 @@ public class CalculateTariffController {
 
         if (cat.getWeightBased()) {
             // weight must be provided in request
-            if (req.getWeight() == null || req.getWeight() <= 0) {
-                throw new InvalidTariffRequestException("Weight must be provided for weight-based products");
+            if (req.getWeight() == null || req.getWeight() <= 0 ||
+                Double.isNaN(req.getWeight()) || Double.isInfinite(req.getWeight()) ||
+                req.getWeight() > 10000) {
+                throw new InvalidTariffRequestException("Weight must be a positive, finite number less than or equal to 10,000 kg for weight-based products");
             }
             usedWeight = req.getWeight();
             // multiply declared value by weight as per Option A
