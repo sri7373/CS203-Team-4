@@ -3,9 +3,9 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://aws-csd-db.cpa8somwae85.ap-southeast-1.rds.amazonaws.com:5432/tariff
-    username: postgres
-    password: lordshiva15_SRI
+    url: ${DB_URL:jdbc:postgresql://aws-csd-db.cpa8somwae85.ap-southeast-1.rds.amazonaws.com:5432/tariff}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
   jpa:
