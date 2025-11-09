@@ -134,7 +134,7 @@ export default function TariffNewsSidebar({ limit = 8 }) {
               gap: "8px",
             }}
           >
-            <span style={{ fontSize: "18px" }}>📰</span>
+            <span style={{ fontSize: "18px" }}></span>
             Latest Tariff News
           </h3>
           <button
