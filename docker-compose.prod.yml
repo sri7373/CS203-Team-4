@@ -39,7 +39,7 @@ services:
     container_name: tariff_frontend_prod
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "8081:80"
     depends_on:
       backend:
         condition: service_healthy
