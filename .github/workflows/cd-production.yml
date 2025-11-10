@@ -129,15 +129,28 @@ jobs:
             docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_FRONTEND }}:latest && \
             docker-compose -f docker-compose.prod.yml down || true && \
             docker-compose -f docker-compose.prod.yml up -d && \
-            sleep 10 && \
+            echo 'Waiting for containers to start...' && \
+            sleep 15 && \
             echo 'Container status:' && \
             docker-compose -f docker-compose.prod.yml ps && \
-            if ! docker-compose -f docker-compose.prod.yml ps | grep -q 'backend.*Up'; then \
-              echo 'Backend container failed to start. Showing logs:'; \
-              docker-compose -f docker-compose.prod.yml logs backend; \
-              exit 1; \
-            fi && \
-            sleep 20 && \
+            echo 'Backend logs:' && \
+            docker-compose -f docker-compose.prod.yml logs --tail=50 backend && \
+            echo 'Checking if backend is healthy...' && \
+            for i in {1..12}; do \
+              if docker inspect tariff_backend_prod | grep -q '\"Status\":\"healthy\"'; then \
+                echo 'Backend is healthy!'; \
+                break; \
+              elif docker inspect tariff_backend_prod | grep -q '\"Status\":\"unhealthy\"'; then \
+                echo 'Backend is unhealthy. Full logs:'; \
+                docker-compose -f docker-compose.prod.yml logs backend; \
+                exit 1; \
+              else \
+                echo \"Attempt \$i/12: Backend status: \$(docker inspect tariff_backend_prod --format='{{.State.Health.Status}}')...\"; \
+                sleep 10; \
+              fi; \
+            done && \
+            echo 'Waiting extra time for full startup...' && \
+            sleep 10 && \
             rm -f ./aws_creds.sh && \
             docker image prune -af --filter 'until=168h' && \
             echo '✅ Production deployment completed'"
