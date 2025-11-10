@@ -126,8 +126,22 @@ jobs:
             # Start new containers
             docker-compose -f docker-compose.prod.yml up -d
             
+            # Wait for containers to start
+            sleep 10
+            
+            # Check container status
+            echo "Container status:"
+            docker-compose -f docker-compose.prod.yml ps
+            
+            # Show backend logs if there are issues
+            if ! docker-compose -f docker-compose.prod.yml ps | grep -q "backend.*Up"; then
+              echo "Backend container failed to start. Showing logs:"
+              docker-compose -f docker-compose.prod.yml logs backend
+              exit 1
+            fi
+            
             # Wait for containers to be healthy
-            sleep 30
+            sleep 20
             
             # Clean up old images
             docker image prune -af --filter "until=168h"
