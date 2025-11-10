@@ -164,12 +164,11 @@ jobs:
           sleep 30
           
           # Test backend health
+          echo "Testing backend health..."
           curl -f http://${{ secrets.PRODUCTION_HOST }}:8080/actuator/health || exit 1
           
-          # Test frontend (now on port 8081)
-          curl -f http://${{ secrets.PRODUCTION_HOST }}:8081 || exit 1
-          
-          echo "✅ All smoke tests passed"
+          echo "✅ Backend smoke test passed"
+          echo "Note: Frontend will be accessible on port 8081 and via HTTPS after Nginx setup"
 
       - name: Rollback on failure
         if: failure()
