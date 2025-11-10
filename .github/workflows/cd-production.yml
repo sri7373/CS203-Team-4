@@ -109,45 +109,27 @@ jobs:
           
           # Deploy with zero-downtime strategy
           ssh -i private_key.pem -o StrictHostKeyChecking=no \
-            ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
-            cd /home/${{ secrets.PRODUCTION_USER }}/app
-            
-            # Login to ECR
-            aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
-              docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
-            
-            # Pull latest images
-            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_BACKEND }}:latest
-            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_FRONTEND }}:latest
-            
-            # Stop existing containers
-            docker-compose -f docker-compose.prod.yml down || true
-            
-            # Start new containers
-            docker-compose -f docker-compose.prod.yml up -d
-            
-            # Wait for containers to start
-            sleep 10
-            
-            # Check container status
-            echo "Container status:"
-            docker-compose -f docker-compose.prod.yml ps
-            
-            # Show backend logs if there are issues
-            if ! docker-compose -f docker-compose.prod.yml ps | grep -q "backend.*Up"; then
-              echo "Backend container failed to start. Showing logs:"
-              docker-compose -f docker-compose.prod.yml logs backend
-              exit 1
-            fi
-            
-            # Wait for containers to be healthy
-            sleep 20
-            
-            # Clean up old images
-            docker image prune -af --filter "until=168h"
-            
-            echo "✅ Production deployment completed"
-          EOF
+            ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} \
+            "cd /home/${{ secrets.PRODUCTION_USER }}/app && \
+            export AWS_ACCESS_KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}' && \
+            export AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}' && \
+            export AWS_DEFAULT_REGION='${{ env.AWS_REGION }}' && \
+            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }} && \
+            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_BACKEND }}:latest && \
+            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_FRONTEND }}:latest && \
+            docker-compose -f docker-compose.prod.yml down || true && \
+            docker-compose -f docker-compose.prod.yml up -d && \
+            sleep 10 && \
+            echo 'Container status:' && \
+            docker-compose -f docker-compose.prod.yml ps && \
+            if ! docker-compose -f docker-compose.prod.yml ps | grep -q 'backend.*Up'; then \
+              echo 'Backend container failed to start. Showing logs:'; \
+              docker-compose -f docker-compose.prod.yml logs backend; \
+              exit 1; \
+            fi && \
+            sleep 20 && \
+            docker image prune -af --filter 'until=168h' && \
+            echo '✅ Production deployment completed'"
           
           rm -f private_key.pem
           rm -f .env.prod
