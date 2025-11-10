@@ -5,10 +5,10 @@ INSERT INTO country (code, name) VALUES ('CHN', 'China');
 INSERT INTO country (code, name) VALUES ('JPN', 'Japan');
 
 -- Insert test product categories
-INSERT INTO product_category (code, description) VALUES ('ELEC', 'Electronics');
-INSERT INTO product_category (code, description) VALUES ('ALCOHOL', 'Alcoholic Beverages');
-INSERT INTO product_category (code, description) VALUES ('TEXTILE', 'Textiles');
-INSERT INTO product_category (code, description) VALUES ('AUTO', 'Automobiles');
+INSERT INTO product_category (code, name, hs_code, weight_based) VALUES ('ELEC', 'Electronics', '8517', false);
+INSERT INTO product_category (code, name, hs_code, weight_based) VALUES ('ALCOHOL', 'Alcoholic Beverages', '2208', false);
+INSERT INTO product_category (code, name, hs_code, weight_based) VALUES ('TEXTILE', 'Textiles', '5208', false);
+INSERT INTO product_category (code, name, hs_code, weight_based) VALUES ('AUTO', 'Automobiles', '8703', false);
 
 -- Insert test tariff rates
 INSERT INTO tariff_rate (origin_country, destination_country, product_category, rate, unit, weight_value) 
