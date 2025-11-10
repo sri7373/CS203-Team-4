@@ -45,6 +45,8 @@ jobs:
           DB_PASSWORD: test_password
           JWT_SECRET: test-secret-key-for-ci-cd-pipeline-testing-only
           JWT_EXPIRATION_MS: 86400000
+          GEMINI_API_KEY: test-gemini-api-key
+          NEWSDATA_API_KEY: test-newsdata-api-key
         run: |
           mvn clean test
           mvn verify

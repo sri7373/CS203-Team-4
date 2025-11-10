@@ -4,10 +4,9 @@
 [![Deploy Production](https://github.com/sri7373/CS203-Team-4/actions/workflows/cd-production.yml/badge.svg)](https://github.com/sri7373/CS203-Team-4/actions/workflows/cd-production.yml)
 
 **Trade Agreements Regulating Imports and Foreign Fees (TARIFF)**
+SMU CS students for the CS203 Collaborative Software Development module. The system enables users to define import tariffs and additional fees, and calculate them for specific industries across different countries at any given time.
 
-This is a group project by 5 Singapore Management University (SMU) students for the Collaborative Software Development (CS203) module. The system enables users to define import tariffs and additional fees, and calculate them for specific industries across different countries at any given time.
-
-## 🚀 Features
+## Features
 
 - ✅ Dynamic tariff rate calculations
 - ✅ Multi-country and multi-industry support
@@ -20,7 +19,7 @@ This is a group project by 5 Singapore Management University (SMU) students for 
 - ✅ AWS RDS database integration
 - ✅ Docker containerization
 
-## 🛠 Tech Stack
+## Tech Stack
 
 ### Backend
 - **Java 17** with Spring Boot 3.3.4
@@ -43,7 +42,7 @@ This is a group project by 5 Singapore Management University (SMU) students for 
 - **AWS EC2** for application hosting
 - **GitHub Actions** for CI/CD
 
-## 📦 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Docker & Docker Compose
@@ -80,7 +79,7 @@ See our comprehensive guides:
 - **[Full CI/CD Setup Documentation](./docs/CI-CD-SETUP.md)** - Detailed setup instructions
 - **[Docker Documentation](./docs/DOCKER.md)** - Docker configuration details
 
-## 📚 Documentation
+## Documentation
 
 - [API Route Documentation](./docs/API_ROUTE_DOCUMENTATION.md)
 - [Backend Architecture](./docs/backend-architecture.md)
@@ -89,7 +88,7 @@ See our comprehensive guides:
 - [CI/CD Pipeline Setup](./docs/CI-CD-SETUP.md)
 - [Docker Setup Guide](./docs/DOCKER.md)
 
-## 🔄 CI/CD Pipeline
+## CI/CD Pipeline
 
 Our automated pipeline includes:
 
@@ -113,39 +112,10 @@ Our automated pipeline includes:
 Feature Branch → PR → Develop/Main → Production
 ```
 
-## 🌳 Branch Strategy
+## Branch Strategy
 
 - `main` - Production-ready code (stable releases)
 - `develop` - Development branch (auto-deploys to production)
 - `feature/*` - New features
 - `hotfix/*` - Critical production fixes
-
-## 👥 Team Members
-
-[Insert team member names and roles]
-
-## 📄 License
-
-[Insert license information]
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📞 Support
-
-For issues and questions:
-- Open an issue on GitHub
-- Check our [documentation](./docs/)
-- Contact the development team
-
----
-
-**Course**: CS203 - Collaborative Software Development  
-**Institution**: Singapore Management University (SMU)  
-**Academic Year**: 2024/2025
 
