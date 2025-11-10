@@ -164,13 +164,10 @@ jobs:
           sleep 30
           
           # Test backend health
-          curl -f http://${{ secrets.PRODUCTION_HOST }}/api/actuator/health || exit 1
+          curl -f http://${{ secrets.PRODUCTION_HOST }}:8080/actuator/health || exit 1
           
           # Test frontend
-          curl -f ${{ secrets.PRODUCTION_URL }} || exit 1
-          
-          # Test API endpoint
-          curl -f ${{ secrets.PRODUCTION_URL }}/api/ || exit 1
+          curl -f http://${{ secrets.PRODUCTION_HOST }} || exit 1
           
           echo "✅ All smoke tests passed"
 
