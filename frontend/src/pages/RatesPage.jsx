@@ -3,7 +3,6 @@ import api from "../services/api.js";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import Select from "../components/Select.jsx";
-import { PRODUCT_CATEGORY_CODES } from "../constants/referenceOptions.js";
 import { useReferenceOptions } from "../hooks/useReferenceOptions.js";
 
 export default function RatesPage() {
@@ -21,14 +20,8 @@ export default function RatesPage() {
   }, [countries]);
 
   const categoryOptions = useMemo(() => {
-    if (categories && categories.length) {
-      return [{ value: "", label: "(Any)" }, ...categories];
-    }
-    const fallback = PRODUCT_CATEGORY_CODES.map((value) => ({
-      value,
-      label: value,
-    }));
-    return [{ value: "", label: "(Any)" }, ...fallback];
+    const base = categories && categories.length ? categories : [];
+    return [{ value: "", label: "(Any)" }, ...base];
   }, [categories]);
 
   useEffect(() => {

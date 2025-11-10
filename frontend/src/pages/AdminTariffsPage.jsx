@@ -9,12 +9,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import Select from "../components/Select.jsx";
 import {
-  COUNTRY_CODES,
-  PRODUCT_CATEGORIES,
+  COUNTRY_CODES as FALLBACK_COUNTRIES,
+  PRODUCT_CATEGORIES as FALLBACK_CATEGORIES,
   DEFAULT_DESTINATION_CODE,
   DEFAULT_ORIGIN_CODE,
   DEFAULT_PRODUCT_CATEGORY,
-  PRODUCT_CATEGORY_CODES,
 } from "../constants/referenceOptions.js";
 import api from "../services/api.js";
 import {
@@ -63,12 +62,12 @@ export default function AdminTariffsPage() {
   const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { tariff, show }
   const feedbackTimeoutRef = useRef(null);
 
-  const loadReferenceData = useCallback(async () => {
+  const loadReferenceData = useCallback(async (forceRefresh = false) => {
     setRefLoading(true);
     try {
       const [countryData, categoryData] = await Promise.all([
-        fetchCountries(),
-        fetchProductCategories(),
+        fetchCountries(forceRefresh),
+        fetchProductCategories(forceRefresh),
       ]);
       const allowedCountries = countryData
         .map((item) => {
@@ -117,12 +116,12 @@ export default function AdminTariffsPage() {
       setReferenceError(null);
     } catch (err) {
       console.error("Failed to load reference data", err);
-      const fallbackCountries = COUNTRY_CODES.map((country) => ({
+      const fallbackCountries = FALLBACK_COUNTRIES.map((country) => ({
         value: country.value ?? country.code,
         label: country.label ?? country.name ?? country.value ?? country.code,
         name: country.name ?? country.label ?? country.value ?? country.code,
       }));
-      const fallbackCategories = PRODUCT_CATEGORIES.map((category) => ({
+      const fallbackCategories = FALLBACK_CATEGORIES.map((category) => ({
         value: category.value ?? category,
         label: category.label ?? category.value ?? category,
         name: category.label ?? category.value ?? category,
@@ -156,7 +155,17 @@ export default function AdminTariffsPage() {
   }, []);
 
   useEffect(() => {
-    loadReferenceData();
+    // Initial load
+    loadReferenceData(false);
+
+    // Refresh reference data every 5 minutes to stay in sync with database
+    const refreshInterval = setInterval(() => {
+      loadReferenceData(true);
+    }, 5 * 60 * 1000);
+
+    return () => {
+      clearInterval(refreshInterval);
+    };
   }, [loadReferenceData]);
 
   const loadTariffs = useCallback(async () => {
@@ -543,6 +552,14 @@ export default function AdminTariffsPage() {
             </button>
             <button type="button" onClick={resetForm} disabled={saving}>
               {editing ? "Cancel Edit" : "Clear"}
+            </button>
+            <button 
+              type="button" 
+              onClick={() => loadReferenceData(true)} 
+              disabled={refLoading}
+              title="Refresh country and category options from database"
+            >
+              {refLoading ? "Refreshing…" : "🔄 Refresh Options"}
             </button>
           </div>
 
