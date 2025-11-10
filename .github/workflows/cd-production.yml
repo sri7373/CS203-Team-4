@@ -1,0 +1,251 @@
+name: CD - Deploy to Production
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-southeast-1  # Change to your AWS region
+  ECR_REPOSITORY_BACKEND: tariff-backend
+  ECR_REPOSITORY_FRONTEND: tariff-frontend
+
+jobs:
+  deploy-production:
+    name: Deploy to Production Environment
+    runs-on: ubuntu-latest
+    environment: 
+      name: production
+      url: ${{ secrets.PRODUCTION_URL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract version
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          elif [[ $GITHUB_REF == refs/heads/develop ]]; then
+            VERSION=dev-${{ github.sha }}
+          else
+            VERSION=prod-${{ github.sha }}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build and push backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --push \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$VERSION \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:latest \
+            ./backend
+
+      - name: Build and push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --push \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$VERSION \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:latest \
+            ./frontend
+
+      - name: Create backup of current deployment
+        run: |
+          echo "${{ secrets.PRODUCTION_SSH_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+          
+          ssh -i private_key.pem -o StrictHostKeyChecking=no \
+            ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+            cd /home/${{ secrets.PRODUCTION_USER }}/app
+            
+            # Backup current docker-compose and environment
+            mkdir -p backups
+            BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
+            mkdir -p $BACKUP_DIR
+            cp docker-compose.prod.yml $BACKUP_DIR/ || true
+            cp .env $BACKUP_DIR/ || true
+            
+            echo "✅ Backup created at $BACKUP_DIR"
+          EOF
+          
+          rm -f private_key.pem
+
+      - name: Create .env file for production
+        run: |
+          cat > .env.prod << EOL
+          # ECR Configuration
+          ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+          ECR_BACKEND_REPOSITORY=${{ env.ECR_REPOSITORY_BACKEND }}
+          ECR_FRONTEND_REPOSITORY=${{ env.ECR_REPOSITORY_FRONTEND }}
+          
+          # Database Configuration (AWS RDS)
+          DB_URL=${{ secrets.DB_URL }}
+          DB_USERNAME=${{ secrets.DB_USERNAME }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          
+          # JWT Security
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          
+          # API Keys
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          NEWSDATA_API_KEY=${{ secrets.NEWSDATA_API_KEY }}
+          EOL
+
+      - name: Deploy to Production with Blue-Green Strategy
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "${{ secrets.PRODUCTION_SSH_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+          
+          # Copy docker-compose and .env file
+          scp -i private_key.pem -o StrictHostKeyChecking=no \
+            docker-compose.prod.yml \
+            ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }}:/home/${{ secrets.PRODUCTION_USER }}/app/
+          
+          scp -i private_key.pem -o StrictHostKeyChecking=no \
+            .env.prod \
+            ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }}:/home/${{ secrets.PRODUCTION_USER }}/app/.env
+          
+          # Deploy with zero-downtime strategy
+          ssh -i private_key.pem -o StrictHostKeyChecking=no \
+            ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+            cd /home/${{ secrets.PRODUCTION_USER }}/app
+            
+            # Login to ECR
+            aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
+              docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+            
+            # Pull latest images
+            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_BACKEND }}:latest
+            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_FRONTEND }}:latest
+            
+            # Stop existing containers
+            docker-compose -f docker-compose.prod.yml down || true
+            
+            # Start new containers
+            docker-compose -f docker-compose.prod.yml up -d
+            
+            # Wait for containers to be healthy
+            sleep 30
+            
+            # Clean up old images
+            docker image prune -af --filter "until=168h"
+            
+            echo "✅ Production deployment completed"
+          EOF
+          
+          rm -f private_key.pem
+          rm -f .env.prod
+
+      - name: Run database migrations
+        run: |
+          echo "${{ secrets.PRODUCTION_SSH_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+          
+          ssh -i private_key.pem -o StrictHostKeyChecking=no \
+            ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+            cd /home/${{ secrets.PRODUCTION_USER }}/app
+            
+            # Run Flyway migrations
+            docker-compose -f docker-compose.prod.yml exec -T backend \
+              java -cp app.jar org.springframework.boot.loader.JarLauncher --migrate
+          EOF
+          
+          rm -f private_key.pem
+
+      - name: Smoke tests
+        run: |
+          sleep 30
+          
+          # Test backend health
+          curl -f ${{ secrets.PRODUCTION_URL }}/actuator/health || exit 1
+          
+          # Test frontend
+          curl -f ${{ secrets.PRODUCTION_URL }} || exit 1
+          
+          # Test API endpoint
+          curl -f ${{ secrets.PRODUCTION_URL }}/api/ || exit 1
+          
+          echo "✅ All smoke tests passed"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed, initiating rollback..."
+          
+          echo "${{ secrets.PRODUCTION_SSH_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+          
+          ssh -i private_key.pem -o StrictHostKeyChecking=no \
+            ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+            cd /home/${{ secrets.PRODUCTION_USER }}/app
+            
+            # Find latest backup
+            LATEST_BACKUP=$(ls -td backups/*/ | head -1)
+            
+            if [ -d "$LATEST_BACKUP" ]; then
+              echo "Restoring from $LATEST_BACKUP"
+              cp $LATEST_BACKUP/docker-compose.prod.yml .
+              docker-compose -f docker-compose.prod.yml down
+              docker-compose -f docker-compose.prod.yml up -d
+              echo "✅ Rollback completed"
+            else
+              echo "❌ No backup found for rollback"
+            fi
+          EOF
+          
+          rm -f private_key.pem
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Production deployment of version ${{ steps.version.outputs.version }}
+            
+            **Deployed Components:**
+            - Backend: `${{ env.ECR_REPOSITORY_BACKEND }}:${{ steps.version.outputs.version }}`
+            - Frontend: `${{ env.ECR_REPOSITORY_FRONTEND }}:${{ steps.version.outputs.version }}`
+          draft: false
+          prerelease: false
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Production deployment completed successfully"
+            echo "Version: ${{ steps.version.outputs.version }}"
+          else
+            echo "❌ Production deployment failed"
+          fi
