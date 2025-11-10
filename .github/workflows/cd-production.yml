@@ -2,7 +2,7 @@ name: CD - Deploy to Production
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]  # Only deploy from main branch
     tags:
       - 'v*.*.*'
   workflow_dispatch:
@@ -40,8 +40,6 @@ jobs:
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/}
-          elif [[ $GITHUB_REF == refs/heads/develop ]]; then
-            VERSION=dev-${{ github.sha }}
           else
             VERSION=prod-${{ github.sha }}
           fi
