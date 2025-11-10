@@ -159,28 +159,12 @@ jobs:
           rm -f .env.prod
           rm -f aws_creds.sh
 
-      - name: Run database migrations
-        run: |
-          echo "${{ secrets.PRODUCTION_SSH_KEY }}" > private_key.pem
-          chmod 600 private_key.pem
-          
-          ssh -i private_key.pem -o StrictHostKeyChecking=no \
-            ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
-            cd /home/${{ secrets.PRODUCTION_USER }}/app
-            
-            # Run Flyway migrations
-            docker-compose -f docker-compose.prod.yml exec -T backend \
-              java -cp app.jar org.springframework.boot.loader.JarLauncher --migrate
-          EOF
-          
-          rm -f private_key.pem
-
       - name: Smoke tests
         run: |
           sleep 30
           
           # Test backend health
-          curl -f ${{ secrets.PRODUCTION_URL }}/actuator/health || exit 1
+          curl -f http://${{ secrets.PRODUCTION_HOST }}/api/actuator/health || exit 1
           
           # Test frontend
           curl -f ${{ secrets.PRODUCTION_URL }} || exit 1
