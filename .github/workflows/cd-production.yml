@@ -166,8 +166,8 @@ jobs:
           # Test backend health
           curl -f http://${{ secrets.PRODUCTION_HOST }}:8080/actuator/health || exit 1
           
-          # Test frontend
-          curl -f http://${{ secrets.PRODUCTION_HOST }} || exit 1
+          # Test frontend (now on port 8081)
+          curl -f http://${{ secrets.PRODUCTION_HOST }}:8081 || exit 1
           
           echo "✅ All smoke tests passed"
 
