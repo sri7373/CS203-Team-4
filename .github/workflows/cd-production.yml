@@ -69,28 +69,6 @@ jobs:
             -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:latest \
             ./frontend
 
-      - name: Create backup of current deployment
-        run: |
-          echo "${{ secrets.PRODUCTION_SSH_KEY }}" > private_key.pem
-          chmod 600 private_key.pem
-          
-          # First SSH connection - create app directory if it doesn't exist
-          ssh -i private_key.pem -o StrictHostKeyChecking=no \
-            ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} \
-            "mkdir -p /home/${{ secrets.PRODUCTION_USER }}/app/backups"
-          
-          # Create backup if files exist
-          ssh -i private_key.pem -o StrictHostKeyChecking=no \
-            ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} \
-            "cd /home/${{ secrets.PRODUCTION_USER }}/app && \
-             BACKUP_DIR=\"backups/\$(date +%Y%m%d_%H%M%S)\" && \
-             mkdir -p \$BACKUP_DIR && \
-             cp docker-compose.prod.yml \$BACKUP_DIR/ 2>/dev/null || true && \
-             cp .env \$BACKUP_DIR/ 2>/dev/null || true && \
-             echo '✅ Backup created at '\$BACKUP_DIR"
-          
-          rm -f private_key.pem
-
       - name: Create .env file for production
         run: |
           cat > .env.prod << EOL
