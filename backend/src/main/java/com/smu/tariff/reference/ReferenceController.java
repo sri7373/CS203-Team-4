@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.smu.tariff.country.CountryRepository;
-import com.smu.tariff.product.ProductCategoryRepository;
+import com.smu.tariff.repository.ProductCategoryRepository;
 
 @RestController
 @RequestMapping("/api/reference")

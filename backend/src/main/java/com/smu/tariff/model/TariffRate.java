@@ -1,8 +1,8 @@
-package com.smu.tariff.tariff;
+package com.smu.tariff.model;
 
 import com.smu.tariff.country.Country;
-import com.smu.tariff.product.ProductCategory;
 import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -34,6 +34,9 @@ public class TariffRate {
     private BigDecimal additionalFee; // flat fee in destination currency
 
     @Column(nullable = false)
+    private Float weightValue = 0.0f; // weight value, default 0
+
+    @Column(nullable = false)
     private LocalDate effectiveFrom;
 
     @Column
@@ -57,16 +60,18 @@ public class TariffRate {
     public Country getOrigin() { return origin; }
     public Country getDestination() { return destination; }
     public ProductCategory getProductCategory() { return productCategory; }
-    public BigDecimal getBaseRate() { return baseRate; }
-    public BigDecimal getAdditionalFee() { return additionalFee; }
+    public java.math.BigDecimal getBaseRate() { return baseRate; }
+    public java.math.BigDecimal getAdditionalFee() { return additionalFee; }
+    public Float getWeightValue() { return weightValue; }
     public LocalDate getEffectiveFrom() { return effectiveFrom; }
     public LocalDate getEffectiveTo() { return effectiveTo; }
 
     public void setOrigin(Country origin) { this.origin = origin; }
     public void setDestination(Country destination) { this.destination = destination; }
     public void setProductCategory(ProductCategory productCategory) { this.productCategory = productCategory; }
-    public void setBaseRate(BigDecimal baseRate) { this.baseRate = baseRate; }
-    public void setAdditionalFee(BigDecimal additionalFee) { this.additionalFee = additionalFee; }
+    public void setBaseRate(java.math.BigDecimal baseRate) { this.baseRate = baseRate; }
+    public void setAdditionalFee(java.math.BigDecimal additionalFee) { this.additionalFee = additionalFee; }
+    public void setWeightValue(Float weightValue) { this.weightValue = weightValue; }
     public void setEffectiveFrom(LocalDate effectiveFrom) { this.effectiveFrom = effectiveFrom; }
     public void setEffectiveTo(LocalDate effectiveTo) { this.effectiveTo = effectiveTo; }
 }
