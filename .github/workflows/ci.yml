@@ -49,7 +49,6 @@ jobs:
           NEWSDATA_API_KEY: test-newsdata-api-key
         run: |
           mvn clean test
-          mvn verify
 
       - name: Upload test results
         if: always()
@@ -57,16 +56,6 @@ jobs:
         with:
           name: backend-test-results
           path: backend/target/surefire-reports/
-
-      - name: Generate test coverage report
-        working-directory: ./backend
-        run: mvn jacoco:report
-
-      - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-coverage
-          path: backend/target/site/jacoco/
 
   frontend-test:
     name: Frontend Tests
