@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: 
       name: production
-      url: ${{ secrets.PRODUCTION_URL }}
+      url: http://${{ secrets.PRODUCTION_HOST }}
 
     steps:
       - name: Checkout code
