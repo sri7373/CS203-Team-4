@@ -16,9 +16,6 @@ jobs:
   deploy-production:
     name: Deploy to Production Environment
     runs-on: ubuntu-latest
-    environment: 
-      name: production
-      url: http://${{ secrets.PRODUCTION_HOST }}
 
     steps:
       - name: Checkout code
