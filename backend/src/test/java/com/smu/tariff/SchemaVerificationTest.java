@@ -27,12 +27,6 @@ class SchemaVerificationTest {
     @Autowired
     private EntityManager entityManager;
 
-    @Autowired
-    private DataSource dataSource;
-    
-    @Autowired
-    private EntityManager entityManager;
-
     @Test
     void queryLogTableContainsResultAndRouteColumns() throws Exception {
         // Ensure Hibernate has initialized the schema
