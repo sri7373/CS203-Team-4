@@ -9,19 +9,19 @@ import jakarta.validation.constraints.Pattern;
 
 public class RegisterRequest {
 
-    @NotBlank
-    @Size(min = 6, max = 30)
+    @NotBlank(message = "Username cannot be blank")
+    @Size(min = 6, max = 30, message = "Username must be between 6 and 30 characters")
     private String username;
 
-    @Email
-    @NotBlank
+    @NotBlank(message = "Email cannot be blank")
+    @Email(message = "Email must be valid")
     private String email;
 
-    @NotBlank
-    @Size(min = 8, max = 20, message = "Password must be between 8 and 20 characters long.")
+    @NotBlank(message = "Password cannot be blank")
+    @Size(min = 8, max = 20, message = "Password must be between 8 and 20 characters")
     @Pattern(
         regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,20}$",
-        message = "Password must contain at least one uppercase letter, one lowercase letter, and one special character."
+        message = "Password must contain at least one uppercase letter, one lowercase letter, and one special character"
     )
     private String password;
 

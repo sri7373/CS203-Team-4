@@ -31,9 +31,7 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Username must not be blank and within a valid length range of 6-30
-    @NotBlank(message = "Username cannot be blank")
-    @Size(min = 6, max = 30, message = "Username must be between 6 and 30 characters")
+    // Username database constraints only - validation handled in DTOs
     @Column(unique = true, nullable = false, length = 30)
     private String username;
 
@@ -46,7 +44,7 @@ public class User implements UserDetails {
 
     // Password cannot be blank and must meet length requirements
     @NotBlank(message = "Password cannot be blank")
-    @Size(min = 8, max = 20, message = "Password must be between 8 and 20 characters")
+    @Size(min = 8, max = 20, message = "must be between 8 and 20 characters")
     @Column(nullable = false, length = 100)
     private String password;
 
