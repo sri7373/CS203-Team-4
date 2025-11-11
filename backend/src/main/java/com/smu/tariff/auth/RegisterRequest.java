@@ -10,7 +10,7 @@ public class RegisterRequest {
     @NotBlank @Size(min = 3, max = 64)
     public String username;
 
-    @Email @NotBlank
+    @Email(message = "Email must be a well-formed email address") @NotBlank(message = "Email must not be blank")
     public String email;
 
     @NotBlank @Size(min = 6, max = 100)

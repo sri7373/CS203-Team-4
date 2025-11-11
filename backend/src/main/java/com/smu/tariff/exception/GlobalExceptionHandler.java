@@ -3,6 +3,8 @@ package com.smu.tariff.exception;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,11 +60,34 @@ public class GlobalExceptionHandler {
         logger.warn("Validation error: {}", ex.getMessage());
 
         Map<String, String> validationErrors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            validationErrors.put(fieldName, errorMessage);
-        });
+        // Group field errors so we can choose a deterministic message when multiple
+        // constraints fail on the same field (e.g., @NotBlank and @Email).
+        Map<String, List<FieldError>> errorsByField = new HashMap<>();
+        for (FieldError fe : ex.getBindingResult().getFieldErrors()) {
+            errorsByField.computeIfAbsent(fe.getField(), k -> new ArrayList<>()).add(fe);
+        }
+
+        for (Map.Entry<String, List<FieldError>> entry : errorsByField.entrySet()) {
+            String fieldName = entry.getKey();
+            List<FieldError> errors = entry.getValue();
+
+            // Prefer a NotBlank-style message if present to clearly indicate empty/blank input.
+            String chosenMessage = null;
+            for (FieldError fe : errors) {
+                String msg = fe.getDefaultMessage();
+                if (msg != null && msg.toLowerCase().contains("must not be blank")) {
+                    chosenMessage = msg;
+                    break;
+                }
+            }
+
+            if (chosenMessage == null && !errors.isEmpty()) {
+                // fallback to the first available message
+                chosenMessage = errors.get(0).getDefaultMessage();
+            }
+
+            validationErrors.put(fieldName, chosenMessage);
+        }
 
         String message = "Validation failed: " + validationErrors;
 

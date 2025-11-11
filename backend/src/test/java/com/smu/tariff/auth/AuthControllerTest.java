@@ -287,8 +287,8 @@ class AuthControllerTest {
         .contentType(MediaType.APPLICATION_JSON)
         .content(registerRequest))
         .andExpect(status().isBadRequest())
-        .andExpect(content().string(containsString("email")))
-        .andExpect(content().string(containsString("blank")));
+        // Assert on structured JSON message to avoid brittle substring checks
+        .andExpect(jsonPath("$.message", containsString("must not be blank")));
     }
 
     @Test
