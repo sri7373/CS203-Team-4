@@ -25,6 +25,10 @@ public class QueryLogDto {
     private String category;
     private String value;
     private String date; // effective date
+    private String hsCode;
+    private String requestedEffectiveFrom;
+    private String requestedEffectiveTo;
+    private String weight;
 
     public QueryLogDto() {}
 
@@ -125,5 +129,37 @@ public class QueryLogDto {
 
     public void setDate(String date) {
         this.date = date;
+    }
+
+    public String getHsCode() {
+        return hsCode;
+    }
+
+    public void setHsCode(String hsCode) {
+        this.hsCode = hsCode;
+    }
+
+    public String getRequestedEffectiveFrom() {
+        return requestedEffectiveFrom;
+    }
+
+    public void setRequestedEffectiveFrom(String requestedEffectiveFrom) {
+        this.requestedEffectiveFrom = requestedEffectiveFrom;
+    }
+
+    public String getRequestedEffectiveTo() {
+        return requestedEffectiveTo;
+    }
+
+    public void setRequestedEffectiveTo(String requestedEffectiveTo) {
+        this.requestedEffectiveTo = requestedEffectiveTo;
+    }
+
+    public String getWeight() {
+        return weight;
+    }
+
+    public void setWeight(String weight) {
+        this.weight = weight;
     }
 }

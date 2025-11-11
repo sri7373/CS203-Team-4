@@ -7,10 +7,15 @@ import jakarta.validation.constraints.NotNull;
 public class TariffCalcRequest {
     @NotBlank public String originCountryCode;
     @NotBlank public String destinationCountryCode;
-    @NotBlank public String productCategoryCode;
+    @NotBlank public String hsCode;
+    public String productCategoryCode;
 
     @NotNull @DecimalMin(value = "0.0", inclusive = false)
-    public Double declaredValue; // base product value in destination currency
+    public Double declaredValue; // base product value BEFORE weight adjustments
 
-    public String date; // ISO date yyyy-MM-dd; optional -> today
+    @DecimalMin(value = "0.0", inclusive = false)
+    public Double weight; // optional; required if the product category is weight based
+
+    public String effectiveFrom; // ISO yyyy-MM-dd optional filter
+    public String effectiveTo;   // ISO yyyy-MM-dd optional filter
 }

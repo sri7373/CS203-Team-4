@@ -20,6 +20,7 @@ import {
   fetchCountries,
   fetchProductCategories,
 } from "../services/reference.js";
+import { formatStoredPercent } from "../utils/percent.js";
 
 const toOptionValue = (option) =>
   typeof option === "string" ? option : option?.value || "";
@@ -475,7 +476,7 @@ export default function AdminTariffsPage() {
 
           <div className="inline-fields field-cluster">
             <div className="field" style={{ flex: "1 1 200px" }}>
-              <label htmlFor="baseRate">Base Rate (decimal)</label>
+              <label htmlFor="baseRate">Base Rate (%)</label>
               <input
                 id="baseRate"
                 className="input"
@@ -486,7 +487,7 @@ export default function AdminTariffsPage() {
                 value={form.baseRate}
                 onChange={handleChange}
                 required
-                placeholder="e.g. 0.05"
+                placeholder="e.g. 5 for 5%"
               />
             </div>
             <div className="field" style={{ flex: "1 1 200px" }}>
@@ -559,7 +560,7 @@ export default function AdminTariffsPage() {
               disabled={refLoading}
               title="Refresh country and category options from database"
             >
-              {refLoading ? "Refreshing…" : "🔄 Refresh Options"}
+              {refLoading ? "Refreshing…" : "Refresh"}
             </button>
           </div>
 
@@ -790,7 +791,7 @@ export default function AdminTariffsPage() {
                   <th>Origin</th>
                   <th>Destination</th>
                   <th>Category</th>
-                  <th>Base Rate</th>
+                    <th>Base Rate (%)</th>
                   <th>Additional Fee</th>
                   <th>Effective From</th>
                   <th>Effective To</th>
@@ -835,7 +836,11 @@ export default function AdminTariffsPage() {
                       <td>{tariff.originCountryCode}</td>
                       <td>{tariff.destinationCountryCode}</td>
                       <td>{tariff.productCategoryCode}</td>
-                      <td>{tariff.baseRate}</td>
+                      <td>
+                        {tariff.baseRate != null
+                          ? formatStoredPercent(tariff.baseRate, "-", 4)
+                          : "-"}
+                      </td>
                       <td>{tariff.additionalFee}</td>
                       <td>{tariff.effectiveFrom}</td>
                       <td>{tariff.effectiveTo || "-"}</td>

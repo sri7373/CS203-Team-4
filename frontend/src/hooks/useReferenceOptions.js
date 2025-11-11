@@ -31,7 +31,16 @@ const normalizeCategory = (item) => {
   }
   const value = raw.toUpperCase();
   const label = item.name ?? item.label ?? value;
-  return { value, label };
+  const hsCodeRaw = item.hsCode ?? item.hs_code ?? value;
+  const hsCode = hsCodeRaw ? hsCodeRaw.toString().toUpperCase() : value;
+  const weightRaw =
+    item.weightBased !== undefined
+      ? item.weightBased
+      : item.weight_based !== undefined
+      ? item.weight_based
+      : false;
+  const weightBased = Boolean(weightRaw);
+  return { value, label, hsCode, weightBased };
 };
 
 const dedupeByValue = (options) => {

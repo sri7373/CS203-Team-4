@@ -9,7 +9,7 @@ The Trade Analytics Service processes real tariff data from the PostgreSQL datab
 ## Data Sources
 
 All calculations are based on the `tariff_rate` table with the following structure:
-- `base_rate`: Decimal value (e.g., 0.0220 for 2.2%)
+- `base_rate`: Percentage value stored between 0 and 100 (e.g., 2.2000 for 2.2%). Services divide by 100 to convert it into a decimal before performing any calculations.
 - `additional_fee`: Currency amount (e.g., 16.00 for $16.00)
 - `origin_id`: Country where goods originate
 - `destination_id`: Country where goods are imported to
@@ -31,11 +31,18 @@ Average Base Rate = Σ(base_rate) / count(rates)
 
 **Implementation**:
 ```java
-BigDecimal sum = rates.stream()
+List<BigDecimal> baseRates = rates.stream()
     .map(TariffRate::getBaseRate)
-    .reduce(BigDecimal.ZERO, BigDecimal::add);
-return sum.divide(BigDecimal.valueOf(rates.size()), 4, RoundingMode.HALF_UP);
+    .filter(Objects::nonNull)
+    .collect(Collectors.toList());
+if (baseRates.isEmpty()) {
+    return BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP);
+}
+BigDecimal sum = baseRates.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+return sum.divide(BigDecimal.valueOf(baseRates.size()), 4, RoundingMode.HALF_UP);
 ```
+
+Null `base_rate` entries are ignored, and if no valid rates remain the method returns `0.0000`.
 
 **Output**: Decimal with 4 decimal places (e.g., 0.0236 for 2.36%)
 
@@ -75,6 +82,8 @@ if (!baseRates.isEmpty()) {
 }
 ```
 
+> The application converts the stored percentage to a decimal (divide by 100) before executing the formula above.
+
 **Example for Electronics (ELEC)**:
 - Database records: [0.0220, 0.0270] (base rates for Electronics)
 - Sum: 0.0490
@@ -107,6 +116,8 @@ if (!additionalFees.isEmpty()) {
 - Sum: 35.00
 - Average: $17.50
 
+Categories that have no valid base rates *and* no valid additional fees after filtering are skipped so analytics never surface empty placeholders. The `totalValue` used for sorting equals the computed base-rate percentage (or zero when unavailable) to keep ordering deterministic.
+
 ---
 
 ### 3. Trading Partners Calculation
@@ -119,8 +130,8 @@ if (!additionalFees.isEmpty()) {
 
 **Formula**:
 ```
-Import Tariff Rate % = (Σ(base_rate_from_partner) / count(rates)) × 100
-Max cap: 100%
+Import Tariff Rate % = (sum(base_rate_from_partner) / count(valid_rates)) x 100
+Result is capped at 100%.
 ```
 
 **Implementation**:
@@ -129,40 +140,54 @@ Map<String, List<TariffRate>> importPartners = importTariffs.stream()
     .collect(Collectors.groupingBy(t -> t.getOrigin().getCode()));
 
 for (Map.Entry<String, List<TariffRate>> entry : importPartners.entrySet()) {
-    // Calculate average base rate as percentage
-    BigDecimal avgBaseRate = rates.stream()
+    List<TariffRate> rates = entry.getValue();
+    BigDecimal sum = rates.stream()
         .map(TariffRate::getBaseRate)
-        .reduce(BigDecimal.ZERO, BigDecimal::add)
-        .divide(BigDecimal.valueOf(rates.size()), 4, RoundingMode.HALF_UP);
-    
-    // Convert to percentage but cap at 100%
-    BigDecimal avgBaseRatePercent = avgBaseRate.multiply(BigDecimal.valueOf(100));
-    if (avgBaseRatePercent.compareTo(BigDecimal.valueOf(100)) > 0) {
-        avgBaseRatePercent = BigDecimal.valueOf(100);
-    }
+        .filter(Objects::nonNull)
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    BigDecimal avgBaseRate = sum.divide(BigDecimal.valueOf(rates.size()), 6, RoundingMode.HALF_UP);
+    BigDecimal avgBaseRatePercent = capPercentage(avgBaseRate.multiply(BigDecimal.valueOf(100)));
+
+    PartnerMetricDto dto = new PartnerMetricDto();
+    dto.totalValue = avgBaseRatePercent;
+    dto.rateCount = rates.size();
+    partnerMap.put(entry.getKey(), dto);
 }
 ```
 
 #### 3.2 Export Partners Processing
 
-Similar to import partners, but groups by destination country.
+Same as imports, but grouped by destination country (`t -> t.getDestination().getCode()`).
 
 #### 3.3 Combined Partner Metrics
 
-**Formula for partners with both import and export relationships**:
+**Formula**:
 ```
-Combined Rate % = (Import Rate % + Export Rate %) / 2
+Combined Rate % = ( (Import Rate % x import_count) + (Export Rate % x export_count) )
+                  / (import_count + export_count)
 ```
 
 **Implementation**:
 ```java
 if (existing != null) {
-    // Average the import and export tariff rates
-    existing.totalValue = existing.totalValue.add(avgBaseRatePercent)
-        .divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
+    BigDecimal combinedSum = existing.totalValue
+        .multiply(BigDecimal.valueOf(existing.rateCount))
+        .add(avgBaseRatePercent.multiply(BigDecimal.valueOf(rates.size())));
+    int totalRates = existing.rateCount + rates.size();
+    existing.totalValue = combinedSum.divide(BigDecimal.valueOf(totalRates), 4, RoundingMode.HALF_UP);
+    existing.rateCount = totalRates;
+} else {
+    PartnerMetricDto dto = new PartnerMetricDto();
+    dto.code = code;
+    dto.name = rates.get(0).getDestination().getName();
+    dto.totalValue = avgBaseRatePercent;
+    dto.rateCount = rates.size();
+    partnerMap.put(code, dto);
 }
 ```
 
+Every intermediate percentage passes through the same `capPercentage` helper so the UI never shows values above 100%.
 ---
 
 ## Data Processing Pipeline
@@ -263,3 +288,6 @@ Frontend formatting:
 - Groups data in memory rather than multiple database queries
 - Lazy loading for country and product category entities
 - Transaction boundary: `@Transactional(readOnly = true)`
+
+
+

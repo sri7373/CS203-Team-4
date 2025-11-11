@@ -72,8 +72,10 @@ public class ReferenceController {
         // Fetch all product categories from the database dynamically
         List<ReferenceOptionDto> response = productCategoryRepository.findAll().stream()
                 .map(cat -> new ReferenceOptionDto(
-                        cat.getCode().toUpperCase(), 
-                        cat.getName()))
+                        cat.getCode().toUpperCase(),
+                        cat.getName(),
+                        cat.getHsCode(),
+                        cat.getWeightBased()))
                 .sorted((a, b) -> a.name.compareTo(b.name)) // Sort by name
                 .collect(Collectors.toList());
 
