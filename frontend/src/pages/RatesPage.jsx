@@ -3,6 +3,7 @@ import api from "../services/api.js";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import Select from "../components/Select.jsx";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   COUNTRY_CODES,
   PRODUCT_CATEGORY_CODES,
@@ -15,6 +16,48 @@ export default function RatesPage() {
   const [rows, setRows] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Process data for historical trend chart
+  const getHistoricalData = () => {
+    if (rows.length === 0) return [];
+    
+    // Group data by date and calculate average base rate
+    const dataByDate = rows.reduce((acc, row) => {
+      const date = row.effectiveFrom;
+      if (!acc[date]) {
+        acc[date] = { date, rates: [], totalRate: 0, count: 0 };
+      }
+      const baseRate = parseFloat(row.baseRate);
+      if (!isNaN(baseRate)) {
+        acc[date].rates.push(baseRate);
+        acc[date].totalRate += baseRate;
+        acc[date].count += 1;
+      }
+      return acc;
+    }, {});
+
+    // Calculate averages and format for chart
+    const result = Object.values(dataByDate)
+      .filter(item => item.count > 0) // Only include dates with valid data
+      .map(item => ({
+        date: item.date,
+        averageBaseRate: parseFloat((item.totalRate / item.count).toFixed(2)),
+        count: item.count
+      }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // If only one data point, duplicate it to create a flat line
+    if (result.length === 1) {
+      const singlePoint = result[0];
+      result.push({
+        date: singlePoint.date + " (End)",
+        averageBaseRate: singlePoint.averageBaseRate,
+        count: singlePoint.count
+      });
+    }
+
+    return result;
+  };
 
   const search = async (e) => {
     e?.preventDefault();
@@ -174,6 +217,61 @@ export default function RatesPage() {
               </motion.table>
             )}
           </AnimatePresence>
+
+          {/* Historical Data Trend Chart */}
+          {rows.length > 0 && !loading && (
+            <motion.div
+              className="card glass"
+              style={{ marginTop: 32, padding: 24 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: [0.4, 0.0, 0.2, 1], delay: 0.2 }}
+            >
+              <h3 className="neon-text" style={{ marginBottom: 20 }}>
+                Historical Base Rate Trends
+              </h3>
+              <div style={{ height: 300, width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={getHistoricalData()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="var(--color-text-muted)"
+                      fontSize={12}
+                    />
+                    <YAxis 
+                      stroke="var(--color-text-muted)"
+                      fontSize={12}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'var(--color-surface)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: '8px',
+                        color: 'var(--color-text)'
+                      }}
+                      formatter={(value, name) => [
+                        `${value}%`,
+                        name === 'averageBaseRate' ? 'Average Base Rate' : name
+                      ]}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="averageBaseRate" 
+                      stroke="var(--color-primary)" 
+                      strokeWidth={2}
+                      dot={{ fill: 'var(--color-primary)', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, fill: 'var(--color-primary-accent)' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="small" style={{ marginTop: 16, color: 'var(--color-text-muted)' }}>
+                Shows average base rate trends over effective dates from search results.
+              </p>
+            </motion.div>
+          )}
+
           {!loading && rows.length === 0 && (
             <div className="small" style={{ marginTop: 8 }}>
               No results yet. Run a search to view configured tariff rates.

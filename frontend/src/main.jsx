@@ -13,7 +13,6 @@ import ProtectedRoute from './routes/ProtectedRoute.jsx'
 import AdminRoute from './routes/AdminRoute.jsx'
 import QueryLogsPage from './pages/QueryLogsPage.jsx'
 import AdminTariffsPage from './pages/AdminTariffsPage.jsx'
-import DataVisualisationPage from './pages/DataVisualisationPage.jsx'
 
 const root = createRoot(document.getElementById('root'))
 root.render(
@@ -62,14 +61,6 @@ root.render(
               <AdminRoute>
                 <AdminTariffsPage />
               </AdminRoute>
-            }
-          />
-          <Route
-            path="/visualization"
-            element={
-              <ProtectedRoute>
-                <DataVisualisationPage />
-              </ProtectedRoute>
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />
