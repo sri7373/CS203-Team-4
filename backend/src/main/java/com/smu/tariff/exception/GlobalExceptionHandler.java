@@ -53,7 +53,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex, WebRequest request) {
+    public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex, WebRequest request) {
         logger.warn("Validation error: {}", ex.getMessage());
 
         Map<String, String> validationErrors = new HashMap<>();
@@ -63,17 +63,15 @@ public class GlobalExceptionHandler {
             validationErrors.put(fieldName, errorMessage);
         });
 
-        String message = "Validation failed: " + validationErrors;
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", Instant.now());
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("error", "Validation Error");
+        response.put("message", "Validation failed");
+        response.put("path", request.getDescription(false).replace("uri=", ""));
+        response.put("validationErrors", validationErrors);
 
-        ErrorResponse error = new ErrorResponse(
-            Instant.now(),
-            HttpStatus.BAD_REQUEST.value(),
-            "Validation Error",
-            message,
-            request.getDescription(false).replace("uri=", "")
-        );
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

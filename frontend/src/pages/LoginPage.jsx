@@ -7,14 +7,35 @@ export default function LoginPage() {
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("admin123");
   const [error, setError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/calculate";
 
+  // Reusable style for field validation errors
+  const fieldErrorStyle = {
+    marginTop: 6,
+    fontSize: "13px",
+    color: "#ef4444",
+    padding: "6px 10px",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderRadius: "4px",
+    border: "1px solid rgba(239, 68, 68, 0.2)",
+  };
+
+  const parseValidationError = (errorData) => {
+    // Check if validationErrors object exists
+    if (errorData?.validationErrors && typeof errorData.validationErrors === 'object') {
+      return errorData.validationErrors;
+    }
+    return {};
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     setLoading(true);
     try {
       const res = await api.post("/auth/login", { username, password });
@@ -27,6 +48,14 @@ export default function LoginPage() {
       if (err.response) {
         const status = err.response.status;
         const data = err.response.data;
+
+        // First, try to parse validation errors
+        const parsedErrors = parseValidationError(data);
+        if (Object.keys(parsedErrors).length > 0) {
+          setFieldErrors(parsedErrors);
+          setError("Please fix the validation errors below.");
+          return;
+        }
 
         // Check if error data has a message property
         if (data?.message) {
@@ -93,7 +122,16 @@ export default function LoginPage() {
             autoComplete="username"
             placeholder="username"
             required
+            aria-invalid={!!fieldErrors.username}
+            aria-describedby={
+              fieldErrors.username ? "username-error" : undefined
+            }
           />
+          {fieldErrors.username && (
+            <div id="username-error" role="alert" style={fieldErrorStyle}>
+              ⚠ {fieldErrors.username}
+            </div>
+          )}
         </div>
         <div className="field">
           <label htmlFor="password">Password</label>
@@ -106,7 +144,16 @@ export default function LoginPage() {
             autoComplete="current-password"
             placeholder="password"
             required
+            aria-invalid={!!fieldErrors.password}
+            aria-describedby={
+              fieldErrors.password ? "password-error" : undefined
+            }
           />
+          {fieldErrors.password && (
+            <div id="password-error" role="alert" style={fieldErrorStyle}>
+              ⚠ {fieldErrors.password}
+            </div>
+          )}
         </div>
         <div className="btn-group" style={{ marginTop: 4 }}>
           <button className="primary" type="submit" disabled={loading}>
