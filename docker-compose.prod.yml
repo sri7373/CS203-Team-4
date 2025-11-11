@@ -39,14 +39,14 @@ services:
     container_name: tariff_frontend_prod
     restart: unless-stopped
     ports:
-      - "8081:80"
+      - "80:80"
     depends_on:
       backend:
         condition: service_healthy
     networks:
       - tariff_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 3
