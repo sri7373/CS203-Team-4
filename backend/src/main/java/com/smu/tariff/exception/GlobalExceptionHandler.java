@@ -60,33 +60,16 @@ public class GlobalExceptionHandler {
         logger.warn("Validation error: {}", ex.getMessage());
 
         Map<String, String> validationErrors = new HashMap<>();
-        // Group field errors so we can choose a deterministic message when multiple
-        // constraints fail on the same field (e.g., @NotBlank and @Email).
-        Map<String, List<FieldError>> errorsByField = new HashMap<>();
+        // Process field errors in a single pass, preferring "must not be blank" messages.
         for (FieldError fe : ex.getBindingResult().getFieldErrors()) {
-            errorsByField.computeIfAbsent(fe.getField(), k -> new ArrayList<>()).add(fe);
-        }
-
-        for (Map.Entry<String, List<FieldError>> entry : errorsByField.entrySet()) {
-            String fieldName = entry.getKey();
-            List<FieldError> errors = entry.getValue();
-
-            // Prefer a NotBlank-style message if present to clearly indicate empty/blank input.
-            String chosenMessage = null;
-            for (FieldError fe : errors) {
-                String msg = fe.getDefaultMessage();
-                if (msg != null && msg.toLowerCase().contains("must not be blank")) {
-                    chosenMessage = msg;
-                    break;
-                }
+            String fieldName = fe.getField();
+            String msg = fe.getDefaultMessage();
+            if (!validationErrors.containsKey(fieldName)) {
+                validationErrors.put(fieldName, msg);
+            } else if (msg != null && msg.toLowerCase().contains("must not be blank")) {
+                // Prefer "must not be blank" message if present
+                validationErrors.put(fieldName, msg);
             }
-
-            if (chosenMessage == null && !errors.isEmpty()) {
-                // fallback to the first available message
-                chosenMessage = errors.get(0).getDefaultMessage();
-            }
-
-            validationErrors.put(fieldName, chosenMessage);
         }
 
         String message = "Validation failed: " + validationErrors;

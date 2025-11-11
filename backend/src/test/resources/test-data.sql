@@ -13,36 +13,50 @@ INSERT INTO product_category (code, name, weight_based) VALUES ('FOOD', 'Food & 
 INSERT INTO product_category (code, name, weight_based) VALUES ('TEXT', 'Textiles', false);
 
 -- Insert test tariff rates
+WITH ids AS (
+    SELECT
+        (SELECT id FROM country WHERE code = 'SGP') AS origin_id,
+        (SELECT id FROM country WHERE code = 'USA') AS destination_id,
+        (SELECT id FROM product_category WHERE code = 'ELEC') AS product_category_id
+)
 INSERT INTO tariff_rate (origin_id, destination_id, product_category_id, base_rate, additional_fee, weight_value, effective_from, effective_to)
 SELECT 
-    (SELECT id FROM country WHERE code = 'SGP'),
-    (SELECT id FROM country WHERE code = 'USA'),
-    (SELECT id FROM product_category WHERE code = 'ELEC'),
+    ids.origin_id,
+    ids.destination_id,
+    ids.product_category_id,
     5.0,
     10.0,
     0.0,
     CURRENT_DATE,
     DATEADD('YEAR', 1, CURRENT_DATE)
+FROM ids
 WHERE NOT EXISTS (
     SELECT 1 FROM tariff_rate tr
-    WHERE tr.origin_id = (SELECT id FROM country WHERE code = 'SGP')
-    AND tr.destination_id = (SELECT id FROM country WHERE code = 'USA')
-    AND tr.product_category_id = (SELECT id FROM product_category WHERE code = 'ELEC')
+    WHERE tr.origin_id = ids.origin_id
+    AND tr.destination_id = ids.destination_id
+    AND tr.product_category_id = ids.product_category_id
 );
 
+WITH ids AS (
+    SELECT
+        (SELECT id FROM country WHERE code = 'USA') AS origin_id,
+        (SELECT id FROM country WHERE code = 'JPN') AS destination_id,
+        (SELECT id FROM product_category WHERE code = 'FOOD') AS product_category_id
+)
 INSERT INTO tariff_rate (origin_id, destination_id, product_category_id, base_rate, additional_fee, weight_value, effective_from, effective_to)
 SELECT 
-    (SELECT id FROM country WHERE code = 'USA'),
-    (SELECT id FROM country WHERE code = 'JPN'),
-    (SELECT id FROM product_category WHERE code = 'FOOD'),
+    ids.origin_id,
+    ids.destination_id,
+    ids.product_category_id,
     3.0,
     5.0,
     0.0,
     CURRENT_DATE,
     DATEADD('YEAR', 1, CURRENT_DATE)
+FROM ids
 WHERE NOT EXISTS (
     SELECT 1 FROM tariff_rate tr
-    WHERE tr.origin_id = (SELECT id FROM country WHERE code = 'USA')
-    AND tr.destination_id = (SELECT id FROM country WHERE code = 'JPN')
-    AND tr.product_category_id = (SELECT id FROM product_category WHERE code = 'FOOD')
+    WHERE tr.origin_id = ids.origin_id
+    AND tr.destination_id = ids.destination_id
+    AND tr.product_category_id = ids.product_category_id
 );

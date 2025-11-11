@@ -18,12 +18,16 @@ spring:
 
 app:
   jwt:
+    # WARNING: This JWT secret is for TESTING ONLY. Never use this value or a similar value in production environments.
     secret: fvbMVJWfii+dPc5Ih2W6s9IC7C+fIdZgC2B/VVnEjBM=
     expirationMs: 86400000
 
 gemini:
   api:
-    key: AIzaSyCxgqgrYbMCQs9178XiPkabKLKkMGi9q-g
+  # Use environment variable for API keys in tests to avoid committing secrets.
+  # Set GEMINI_API_KEY in the test environment or CI secrets. Provide an empty default
+  # to avoid failing tests when the variable is not present locally.
+  key: ${GEMINI_API_KEY:}
 
 logging:
   level:

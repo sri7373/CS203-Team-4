@@ -48,7 +48,11 @@ class ReferenceControllerUnitTest {
 
     mockMvc.perform(get("/api/reference/product-categories"))
         .andExpect(status().isOk())
+        // First entry comes from the controller's fallback list
         .andExpect(jsonPath("$[0].code").value("STEEL"))
-        .andExpect(jsonPath("$[0].label").value("Steel Products"));
+        .andExpect(jsonPath("$[0].label").value("Steel Products"))
+        // Second entry should reflect the resolved name provided by the repository
+        .andExpect(jsonPath("$[1].code").value("ELEC"))
+        .andExpect(jsonPath("$[1].label").value("Electronics"));
     }
 }
