@@ -47,8 +47,7 @@ api.interceptors.response.use(
         message: message,
         raw: raw,
         timestamp: errorData?.timestamp,
-        path: errorData?.path,
-        validationErrors: errorData?.validationErrors // Preserve validation errors
+        path: errorData?.path
       }
       
       // Attach the formatted error to the error object

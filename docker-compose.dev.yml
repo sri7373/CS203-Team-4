@@ -6,8 +6,6 @@ services:
     image: postgres:15
     container_name: tariff_db_dev
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -46,13 +44,13 @@ services:
     container_name: tariff_backend_dev
     restart: unless-stopped
     environment:
-      - SPRING_DATASOURCE_URL=${DB_URL}
-      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRATION_MS=${JWT_EXPIRATION_MS}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - NEWSDATA_API_KEY=${NEWSDATA_API_KEY}
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-AIzaSyCxgqgrYbMCQs9178XiPkabKLKkMGi9q-g}
+      NEWSDATA_API_KEY: ${NEWSDATA_API_KEY:-pub_7713507262314bd18c0fb64c8536c7bc}
     ports:
       - "8080:8080"
     depends_on:

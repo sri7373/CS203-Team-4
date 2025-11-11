@@ -1,5 +1,5 @@
 # Multi-stage build for Spring Boot backend
-FROM maven:3.9-eclipse-temurin-17 AS build
+FROM maven:3.9-eclipse-temurin-17-alpine AS build
 WORKDIR /app
 
 # Copy pom.xml and download dependencies (cached layer)
@@ -13,11 +13,11 @@ COPY src ./src
 RUN mvn clean package -DskipTests -B
 
 # Production image
-FROM eclipse-temurin:17-jre-jammy 
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
 # Create non-root user for security
-RUN groupadd -r spring && useradd -r -g spring -s /usr/sbin/nologin spring
+RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 
 # Copy the built JAR from build stage
@@ -32,4 +32,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
-
