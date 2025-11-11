@@ -46,14 +46,21 @@ public class ReferenceController {
     @GetMapping("/countries")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public ResponseEntity<List<ReferenceOptionDto>> listCountries() {
-        Map<String, String> resolvedNames = countryRepository.findAll().stream()
-                .collect(Collectors.toMap(country -> country.getCode().toUpperCase(), country -> country.getName(),
-                        (a, b) -> a));
+        // Fetch all countries from the database dynamically
+        List<ReferenceOptionDto> response = countryRepository.findAll().stream()
+                .map(country -> new ReferenceOptionDto(
+                        country.getCode().toUpperCase(), 
+                        country.getName()))
+                .sorted((a, b) -> a.name.compareTo(b.name)) // Sort by name
+                .collect(Collectors.toList());
 
-        List<ReferenceOptionDto> response = new ArrayList<>();
-        for (String code : COUNTRY_CODES) {
-            String name = resolvedNames.getOrDefault(code, COUNTRY_FALLBACK_NAMES.getOrDefault(code, code));
-            response.add(new ReferenceOptionDto(code, name));
+        // Fallback to hardcoded list if database is empty
+        if (response.isEmpty()) {
+            response = new ArrayList<>();
+            for (String code : COUNTRY_CODES) {
+                String name = COUNTRY_FALLBACK_NAMES.getOrDefault(code, code);
+                response.add(new ReferenceOptionDto(code, name));
+            }
         }
 
         return ResponseEntity.ok(response);
@@ -62,15 +69,21 @@ public class ReferenceController {
     @GetMapping("/product-categories")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public ResponseEntity<List<ReferenceOptionDto>> listProductCategories() {
-        Map<String, String> resolvedNames = productCategoryRepository.findAll().stream()
-                .collect(Collectors.toMap(cat -> cat.getCode().toUpperCase(), cat -> cat.getName(),
-                        (a, b) -> a));
+        // Fetch all product categories from the database dynamically
+        List<ReferenceOptionDto> response = productCategoryRepository.findAll().stream()
+                .map(cat -> new ReferenceOptionDto(
+                        cat.getCode().toUpperCase(), 
+                        cat.getName()))
+                .sorted((a, b) -> a.name.compareTo(b.name)) // Sort by name
+                .collect(Collectors.toList());
 
-        List<ReferenceOptionDto> response = new ArrayList<>();
-        for (String code : PRODUCT_CATEGORY_CODES) {
-            String name = resolvedNames.getOrDefault(code,
-                    PRODUCT_CATEGORY_FALLBACK_NAMES.getOrDefault(code, code));
-            response.add(new ReferenceOptionDto(code, name));
+        // Fallback to hardcoded list if database is empty
+        if (response.isEmpty()) {
+            response = new ArrayList<>();
+            for (String code : PRODUCT_CATEGORY_CODES) {
+                String name = PRODUCT_CATEGORY_FALLBACK_NAMES.getOrDefault(code, code);
+                response.add(new ReferenceOptionDto(code, name));
+            }
         }
 
         return ResponseEntity.ok(response);
