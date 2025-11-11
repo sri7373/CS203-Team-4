@@ -28,7 +28,7 @@ public class TariffRate {
     private ProductCategory productCategory;
 
     @Column(nullable = false, precision = 8, scale = 4)
-    private BigDecimal baseRate; // e.g., 0.05 for 5%
+    private BigDecimal baseRate; // stored as percentage (e.g., 5.0000 for 5%)
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal additionalFee; // flat fee in destination currency

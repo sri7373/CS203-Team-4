@@ -4,6 +4,7 @@ import MotionWrapper from "../components/MotionWrapper.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import Select from "../components/Select.jsx";
 import { useReferenceOptions } from "../hooks/useReferenceOptions.js";
+import { formatStoredPercent } from "../utils/percent.js";
 
 export default function RatesPage() {
   const [origin, setOrigin] = useState("");
@@ -179,7 +180,7 @@ export default function RatesPage() {
                     <th>Origin</th>
                     <th>Destination</th>
                     <th>Category</th>
-                    <th>Base Rate</th>
+                    <th>Base Rate (%)</th>
                     <th>Additional Fee</th>
                     <th>Effective From</th>
                     <th>Effective To</th>
@@ -192,7 +193,11 @@ export default function RatesPage() {
                       <td>{r.originCountryCode}</td>
                       <td>{r.destinationCountryCode}</td>
                       <td>{r.productCategoryCode}</td>
-                      <td>{r.baseRate}</td>
+                      <td>
+                        {r.baseRate != null
+                          ? formatStoredPercent(r.baseRate)
+                          : "-"}
+                      </td>
                       <td>{r.additionalFee}</td>
                       <td>{r.effectiveFrom}</td>
                       <td>{r.effectiveTo || "-"}</td>

@@ -8,6 +8,10 @@ public class TariffRateDto {
     public String originCountryCode;
     public String destinationCountryCode;
     public String productCategoryCode;
+    public String productCategoryName;
+    public String hsCode;
+    public Boolean weightBased;
+    public Float weightValue;
     public BigDecimal baseRate;
     public BigDecimal additionalFee;
     public LocalDate effectiveFrom;

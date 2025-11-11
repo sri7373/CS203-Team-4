@@ -10,5 +10,6 @@ public class CountryTradeInsightsDto {
     public BigDecimal averageExportTariff;
     public List<ProductMetricDto> topImports;
     public List<ProductMetricDto> topExports;
-    public List<PartnerMetricDto> majorPartners;
+    public List<PartnerTradeDetailsDto> majorImportPartners;
+    public List<PartnerTradeDetailsDto> majorExportPartners;
 }

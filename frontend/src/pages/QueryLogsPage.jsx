@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../services/api.js";
 import MotionWrapper from "../components/MotionWrapper.jsx";
+import { formatStoredPercent } from "../utils/percent.js";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -19,16 +20,36 @@ function safeJsonParse(value) {
 function CalculatedResultCard({ result }) {
   if (!result) return null;
 
+  const productLabel = result.productCategoryName
+    ? `${result.productCategoryName} (${result.productCategoryCode})`
+    : result.productCategoryCode || "-";
+  const scheduleWindow = `${result.rateEffectiveFrom || "-"} -> ${
+    result.rateEffectiveTo || "Open"
+  }`;
+  const requestedWindow = `${result.requestedEffectiveFrom || "-"} -> ${
+    result.requestedEffectiveTo || "-"
+  }`;
+
   const metrics = [
+    ...(result.weightBased && result.declaredValuePerUnit != null
+      ? [
+          {
+            label: "Declared Value (per unit)",
+            value: currencyFormatter.format(
+              Number(result.declaredValuePerUnit || 0)
+            ),
+          },
+        ]
+      : []),
     {
-      label: "Declared Value",
+      label: result.weightBased ? "Weighted Declared Value" : "Declared Value",
       value: currencyFormatter.format(Number(result.declaredValue || 0)),
     },
     {
       label: "Base Rate",
       value:
         result.baseRate != null
-          ? `${Number(result.baseRate * 100).toFixed(2)}%`
+          ? formatStoredPercent(result.baseRate)
           : "-",
     },
     {
@@ -39,6 +60,15 @@ function CalculatedResultCard({ result }) {
       label: "Additional Fee",
       value: currencyFormatter.format(Number(result.additionalFee || 0)),
     },
+    ...(result.weightBased
+      ? [
+          {
+            label: "Weight Applied",
+            value:
+              result.weight != null ? `${Number(result.weight)} kg` : "0 kg",
+          },
+        ]
+      : []),
     {
       label: "Total Cost",
       value: currencyFormatter.format(Number(result.totalCost || 0)),
@@ -66,7 +96,7 @@ function CalculatedResultCard({ result }) {
           background:
             "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(168,85,247,0.12))",
           border: "1px solid rgba(129,140,248,0.25)",
-          marginBottom: 18,
+          marginBottom: 12,
         }}
       >
         <div style={{ minWidth: 180 }}>
@@ -78,28 +108,38 @@ function CalculatedResultCard({ result }) {
           </div>
           <div style={{ fontWeight: 600 }}>{`${
             result.originCountryCode || "-"
-          } → ${result.destinationCountryCode || "-"}`}</div>
+          } -> ${result.destinationCountryCode || "-"}`}</div>
         </div>
-        <div style={{ minWidth: 140 }}>
+        <div style={{ minWidth: 160 }}>
           <div
             className="small neon-subtle"
             style={{ letterSpacing: 0.8, marginBottom: 4 }}
           >
             PRODUCT
           </div>
-          <div style={{ fontWeight: 600 }}>
-            {result.productCategoryCode || "-"}
-          </div>
+          <div style={{ fontWeight: 600 }}>{productLabel}</div>
         </div>
         <div style={{ minWidth: 140 }}>
           <div
             className="small neon-subtle"
             style={{ letterSpacing: 0.8, marginBottom: 4 }}
           >
-            EFFECTIVE
+            HS CODE
           </div>
-          <div style={{ fontWeight: 600 }}>{result.effectiveDate || "-"}</div>
+          <div style={{ fontWeight: 600 }}>{result.hsCode || "-"}</div>
         </div>
+        <div style={{ minWidth: 200 }}>
+          <div
+            className="small neon-subtle"
+            style={{ letterSpacing: 0.8, marginBottom: 4 }}
+          >
+            SCHEDULE
+          </div>
+          <div style={{ fontWeight: 600 }}>{scheduleWindow}</div>
+        </div>
+      </div>
+      <div className="tiny neon-subtle" style={{ marginBottom: 12 }}>
+        Requested window: {requestedWindow}
       </div>
 
       <div style={highlightStyle}>
@@ -132,7 +172,6 @@ function CalculatedResultCard({ result }) {
     </div>
   );
 }
-
 function SearchResultCard({ result }) {
   if (!result) return null;
   return (
@@ -270,9 +309,16 @@ export default function QueryLogsPage() {
                     <th style={{ textAlign: "left", padding: 8 }}>
                       Destination
                     </th>
+                    <th style={{ textAlign: "left", padding: 8 }}>HS Code</th>
                     <th style={{ textAlign: "left", padding: 8 }}>Category</th>
-                    <th style={{ textAlign: "left", padding: 8 }}>Value</th>
-                    <th style={{ textAlign: "left", padding: 8 }}>Date</th>
+                    <th style={{ textAlign: "left", padding: 8 }}>Declared</th>
+                    <th style={{ textAlign: "left", padding: 8 }}>Weight</th>
+                    <th style={{ textAlign: "left", padding: 8 }}>
+                      Requested From
+                    </th>
+                    <th style={{ textAlign: "left", padding: 8 }}>
+                      Requested To
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -292,9 +338,16 @@ export default function QueryLogsPage() {
                       </td>
                       <td style={{ padding: 10 }}>{l.origin || "-"}</td>
                       <td style={{ padding: 10 }}>{l.destination || "-"}</td>
+                      <td style={{ padding: 10 }}>{l.hsCode || "-"}</td>
                       <td style={{ padding: 10 }}>{l.category || "-"}</td>
                       <td style={{ padding: 10 }}>{l.value || "-"}</td>
-                      <td style={{ padding: 10 }}>{l.date || "-"}</td>
+                      <td style={{ padding: 10 }}>{l.weight || "-"}</td>
+                      <td style={{ padding: 10 }}>
+                        {l.requestedEffectiveFrom || "-"}
+                      </td>
+                      <td style={{ padding: 10 }}>
+                        {l.requestedEffectiveTo || "-"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -349,7 +402,7 @@ export default function QueryLogsPage() {
               {selectedLog.createdAt
                 ? new Date(selectedLog.createdAt).toLocaleString()
                 : "-"}{" "}
-              · {selectedLog.username || "Anonymous"} ·{" "}
+              | {selectedLog.username || "Anonymous"} |{" "}
               {selectedLog.action || selectedLog.type || "-"}
             </div>
 
@@ -362,3 +415,4 @@ export default function QueryLogsPage() {
     </MotionWrapper>
   );
 }
+
