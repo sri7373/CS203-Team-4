@@ -228,7 +228,7 @@ export default function RatesPage() {
               transition={{ duration: 0.45, ease: [0.4, 0.0, 0.2, 1], delay: 0.2 }}
             >
               <h3 className="neon-text" style={{ marginBottom: 20 }}>
-                Historical Base Rate Trends
+                Historical Base Rate Trend
               </h3>
               <div style={{ height: 300, width: '100%' }}>
                 <ResponsiveContainer width="100%" height="100%">
