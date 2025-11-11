@@ -51,7 +51,7 @@ export default function CalculatePage() {
       seen.add(hs);
       acc.push({
         value: hs,
-        label: `${hs} · ${option.label}`,
+        label: hs,
         categoryCode: option.value,
       });
       return acc;
@@ -433,7 +433,12 @@ export default function CalculatePage() {
             <form onSubmit={submit} noValidate className="calc-form">
               <div className="inline-fields field-cluster">
                 <div className="field" style={{ flex: "1 1 220px" }}>
-                  <label htmlFor="origin">Origin Country</label>
+                  <label htmlFor="origin">
+                    Origin Country{" "}
+                    <span style={{ color: "#f87171" }} aria-hidden="true">
+                      *
+                    </span>
+                  </label>
                   <Select
                     id="origin"
                     value={origin}
@@ -442,7 +447,12 @@ export default function CalculatePage() {
                   />
                 </div>
                 <div className="field" style={{ flex: "1 1 220px" }}>
-                  <label htmlFor="destination">Destination Country</label>
+                  <label htmlFor="destination">
+                    Destination Country{" "}
+                    <span style={{ color: "#f87171" }} aria-hidden="true">
+                      *
+                    </span>
+                  </label>
                   <Select
                     id="destination"
                     value={destination}
@@ -483,7 +493,12 @@ export default function CalculatePage() {
 
               <div className="inline-fields field-cluster">
                 <div className="field" style={{ flex: "1 1 220px" }}>
-                  <label htmlFor="declared">Declared Value (USD)</label>
+                  <label htmlFor="declared">
+                    Declared Value (USD){" "}
+                    <span style={{ color: "#f87171" }} aria-hidden="true">
+                      *
+                    </span>
+                  </label>
                   <input
                     id="declared"
                     className="input"
@@ -496,13 +511,27 @@ export default function CalculatePage() {
                   />
                 </div>
                 <div className="field" style={{ flex: "1 1 220px" }}>
-                  <label htmlFor="weight">
-                    Weight (kg){" "}
-                    {categoryIsWeightBased ? (
-                      <span style={{ color: "#f87171" }}>*</span>
-                    ) : (
-                      <span className="tiny">(auto-disabled)</span>
-                    )}
+                  <label htmlFor="weight" style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <span>
+                      Weight (kg){" "}
+                      {categoryIsWeightBased ? (
+                        <span style={{ color: "#f87171" }}>*</span>
+                      ) : (
+                        <span className="tiny">(auto-disabled)</span>
+                      )}
+                    </span>
+                    <span
+                      title="If the selected HS code is weight-based, the declared value is scaled by your entered weight relative to the schedule’s weight unit before tariffs apply."
+                      style={{
+                        cursor: "help",
+                        fontSize: 12,
+                        color: "var(--color-accent)",
+                        opacity: 0.9,
+                      }}
+                      aria-label="Weight-based tariffs scale the declared value using the provided weight."
+                    >
+                      ⓘ
+                    </span>
                   </label>
                   <input
                     id="weight"
@@ -734,7 +763,8 @@ export default function CalculatePage() {
                         className="tiny neon-subtle"
                         style={{ marginBottom: 16 }}
                       >
-                        Requested window: {res.requestedEffectiveFrom || "-"} ->
+                        Requested window: {res.requestedEffectiveFrom || "-"}
+                        <span aria-hidden="true"> → </span>
                         {res.requestedEffectiveTo || "-"}
                       </div>
                     )}

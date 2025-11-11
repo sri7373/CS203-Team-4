@@ -623,6 +623,10 @@ public class TariffService {
         dto.originCountryCode = rate.getOrigin().getCode();
         dto.destinationCountryCode = rate.getDestination().getCode();
         dto.productCategoryCode = rate.getProductCategory().getCode();
+        dto.productCategoryName = rate.getProductCategory().getName();
+        dto.hsCode = rate.getProductCategory().getHsCode();
+        dto.weightBased = rate.getProductCategory().getWeightBased();
+        dto.weightValue = rate.getWeightValue();
         dto.baseRate = rate.getBaseRate();
         dto.additionalFee = rate.getAdditionalFee();
         dto.effectiveFrom = rate.getEffectiveFrom();
