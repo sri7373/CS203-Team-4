@@ -46,6 +46,53 @@ export default function RatesPage() {
     }
   }, [categoryOptions, category]);
 
+  // Process data for historical trend chart
+  const getHistoricalData = () => {
+    if (rows.length === 0) return [];
+    
+    // Group data by date and calculate average base rate
+    const dataByDate = rows.reduce((acc, row) => {
+      const date = row.effectiveFrom;
+      if (!acc[date]) {
+        acc[date] = { date, rates: [], totalRate: 0, count: 0 };
+      }
+      const baseRate = parseFloat(row.baseRate);
+      if (!isNaN(baseRate)) {
+        acc[date].rates.push(baseRate);
+        acc[date].totalRate += baseRate;
+        acc[date].count += 1;
+      }
+      return acc;
+    }, {});
+
+    // Calculate averages and format for chart
+    const result = Object.values(dataByDate)
+      .filter(item => item.count > 0) // Only include dates with valid data
+      .map(item => ({
+        date: item.date,
+        averageBaseRate: parseFloat((item.totalRate / item.count).toFixed(2)),
+        count: item.count
+      }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // If only one data point, duplicate it to create a flat line
+    if (result.length === 1) {
+      const singlePoint = result[0];
+      result.push({
+        date: (() => {
+          const d = new Date(singlePoint.date);
+          // Add one day (in ms)
+          d.setDate(d.getDate() + 1);
+          return d.toISOString().slice(0, 10); // Format as YYYY-MM-DD
+        })(),
+        averageBaseRate: singlePoint.averageBaseRate,
+        count: singlePoint.count
+      });
+    }
+
+    return result;
+  };
+  
   const search = async (e) => {
     e?.preventDefault();
     setError(null);
