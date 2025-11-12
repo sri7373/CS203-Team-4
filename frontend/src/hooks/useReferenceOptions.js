@@ -1,0 +1,131 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  fetchCountries,
+  fetchProductCategories,
+} from "../services/reference.js";
+import {
+  COUNTRY_CODES as FALLBACK_COUNTRIES,
+  PRODUCT_CATEGORIES as FALLBACK_CATEGORIES,
+} from "../constants/referenceOptions.js";
+
+const normalizeCountry = (item) => {
+  if (!item) {
+    return null;
+  }
+  const raw = item.code ?? item.value ?? "";
+  if (!raw) {
+    return null;
+  }
+  const value = raw.toUpperCase();
+  const label = item.name ?? item.label ?? value;
+  return { value, label };
+};
+
+const normalizeCategory = (item) => {
+  if (!item) {
+    return null;
+  }
+  const raw = item.code ?? item.value ?? "";
+  if (!raw) {
+    return null;
+  }
+  const value = raw.toUpperCase();
+  const label = item.name ?? item.label ?? value;
+  const hsCodeRaw = item.hsCode ?? item.hs_code ?? value;
+  const hsCode = hsCodeRaw ? hsCodeRaw.toString().toUpperCase() : value;
+  const weightRaw =
+    item.weightBased !== undefined
+      ? item.weightBased
+      : item.weight_based !== undefined
+      ? item.weight_based
+      : false;
+  const weightBased = Boolean(weightRaw);
+  return { value, label, hsCode, weightBased };
+};
+
+const dedupeByValue = (options) => {
+  const seen = new Set();
+  const result = [];
+  options.forEach((option) => {
+    if (!option) return;
+    if (seen.has(option.value)) return;
+    seen.add(option.value);
+    result.push(option);
+  });
+  return result;
+};
+
+export function useReferenceOptions() {
+  const [countries, setCountries] = useState(() =>
+    dedupeByValue(FALLBACK_COUNTRIES.map(normalizeCountry))
+  );
+  const [categories, setCategories] = useState(() =>
+    dedupeByValue(FALLBACK_CATEGORIES.map(normalizeCategory))
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load(forceRefresh = false) {
+      setLoading(true);
+      setError(null);
+      try {
+        const [countriesResponse, categoriesResponse] = await Promise.all([
+          fetchCountries(forceRefresh),
+          fetchProductCategories(forceRefresh),
+        ]);
+
+        if (cancelled) return;
+
+        const normalizedCountries = dedupeByValue(
+          countriesResponse.map(normalizeCountry)
+        );
+        if (normalizedCountries.length) {
+          setCountries(normalizedCountries);
+        }
+
+        const normalizedCategories = dedupeByValue(
+          categoriesResponse.map(normalizeCategory)
+        );
+        if (normalizedCategories.length) {
+          setCategories(normalizedCategories);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Failed to load reference options", err);
+          setError(err);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    // Initial load
+    load(false);
+
+    // Refresh data every 5 minutes to stay in sync with database
+    const refreshInterval = setInterval(() => {
+      load(true);
+    }, 5 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(refreshInterval);
+    };
+  }, []);
+
+  return useMemo(
+    () => ({
+      countries,
+      categories,
+      loading,
+      error,
+    }),
+    [countries, categories, loading, error]
+  );
+}
+

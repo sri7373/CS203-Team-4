@@ -4,12 +4,13 @@ import api from "../services/api.js";
 import { setAuth } from "../services/auth.js";
 
 export default function RegisterPage() {
-  const [username, setUsername] = useState("analyst");
-  const [email, setEmail] = useState("analyst@local");
-  const [password, setPassword] = useState("analyst123");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
   // Reusable style for field validation errors
@@ -23,11 +24,22 @@ export default function RegisterPage() {
     border: "1px solid rgba(239, 68, 68, 0.2)",
   };
 
-  const parseValidationError = (message) => {
-    const errors = {};
+  const parseValidationError = (errorData) => {
+    // New format: Check if validationErrors object exists
+    if (errorData?.validationErrors && typeof errorData.validationErrors === 'object') {
+      return errorData.validationErrors;
+    }
 
-    // Parse validation message format: "Validation failed: {field=message, field=message}"
-    if (message && message.includes("Validation failed:")) {
+    // Check in raw data if it exists
+    if (errorData?.raw?.validationErrors && typeof errorData.raw.validationErrors === 'object') {
+      return errorData.raw.validationErrors;
+    }
+
+    // Legacy format: Parse validation message format: "Validation failed: {field=message, field=message}"
+    const errors = {};
+    const message = errorData?.message || errorData;
+    
+    if (message && typeof message === 'string' && message.includes("Validation failed:")) {
       const errorPart = message.split("Validation failed:")[1];
 
       // Extract field-specific errors
@@ -60,7 +72,7 @@ export default function RegisterPage() {
     setFieldErrors({});
     setLoading(true);
     try {
-      const res = await api.post("/api/auth/register", {
+      const res = await api.post("/auth/register", {
         username,
         email,
         password,
@@ -75,33 +87,36 @@ export default function RegisterPage() {
         const status = err.response.status;
         const data = err.response.data;
 
-        // Check if error data has a message property
+
+
+        // First, try to parse validation errors from the new format
+        // Check both the original data and the transformed errorDetails
+        let parsedErrors = parseValidationError(data);
+        if (Object.keys(parsedErrors).length === 0 && err.errorDetails) {
+          parsedErrors = parseValidationError(err.errorDetails);
+        }
+        
+        // Direct check for validationErrors in response data
+        if (status === 400 && data && typeof data === 'object' && data.validationErrors) {
+          setFieldErrors(data.validationErrors);
+          setError("Please fix the validation errors below.");
+          return;
+        }
+        
+
+
+        
+        if (Object.keys(parsedErrors).length > 0) {
+          setFieldErrors(parsedErrors);
+          setError("Please fix the validation errors below.");
+          return;
+        }
+
+        // Handle other error formats
         if (data?.message) {
-          // Check if it's a validation error with field-specific messages
-          if (data.message.includes("Validation failed:")) {
-            const parsedErrors = parseValidationError(data.message);
-            if (Object.keys(parsedErrors).length > 0) {
-              setFieldErrors(parsedErrors);
-              setError("Please fix the validation errors below.");
-            } else {
-              setError(data.message);
-            }
-          } else {
-            setError(data.message);
-          }
+          setError(data.message);
         } else if (typeof data === "string") {
-          // Check if string contains validation errors
-          if (data.includes("Validation failed:")) {
-            const parsedErrors = parseValidationError(data);
-            if (Object.keys(parsedErrors).length > 0) {
-              setFieldErrors(parsedErrors);
-              setError("Please fix the validation errors below.");
-            } else {
-              setError(data);
-            }
-          } else {
-            setError(data);
-          }
+          setError(data);
         } else {
           // Handle based on HTTP status code
           switch (status) {
@@ -155,6 +170,7 @@ export default function RegisterPage() {
           <strong>Error:</strong> {error}
         </div>
       )}
+
       <form onSubmit={submit} noValidate>
         <div className="field">
           <label htmlFor="username">Username</label>
@@ -171,12 +187,8 @@ export default function RegisterPage() {
             }
           />
           {fieldErrors.username && (
-            <div
-              id="username-error"
-              role="alert"
-              style={fieldErrorStyle}
-            >
-              ⚠ Username {fieldErrors.username}
+            <div id="username-error" role="alert" style={fieldErrorStyle}>
+              ⚠ {fieldErrors.username}
             </div>
           )}
         </div>
@@ -194,12 +206,8 @@ export default function RegisterPage() {
             aria-describedby={fieldErrors.email ? "email-error" : undefined}
           />
           {fieldErrors.email && (
-            <div
-              id="email-error"
-              role="alert"
-              style={fieldErrorStyle}
-            >
-              ⚠ Email {fieldErrors.email}
+            <div id="email-error" role="alert" style={fieldErrorStyle}>
+              ⚠ {fieldErrors.email}
             </div>
           )}
         </div>
@@ -219,18 +227,14 @@ export default function RegisterPage() {
             }
           />
           {fieldErrors.password && (
-            <div
-              id="password-error"
-              role="alert"
-              style={fieldErrorStyle}
-            >
+            <div id="password-error" role="alert" style={fieldErrorStyle}>
               ⚠ {fieldErrors.password}
             </div>
           )}
         </div>
         <div className="btn-group" style={{ marginTop: 4 }}>
           <button className="primary" type="submit" disabled={loading}>
-            {loading ? "Creating…" : "Create account"}
+            {loading ? "Creating..." : "Create account"}
           </button>
           <Link to="/login">
             <button type="button" disabled={loading}>

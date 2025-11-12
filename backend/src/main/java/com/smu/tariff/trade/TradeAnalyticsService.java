@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -17,10 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.smu.tariff.country.Country;
 import com.smu.tariff.country.CountryRepository;
 import com.smu.tariff.exception.InvalidTariffRequestException;
-import com.smu.tariff.tariff.TariffRate;
-import com.smu.tariff.tariff.TariffRateRepository;
+import com.smu.tariff.model.TariffRate;
+import com.smu.tariff.repository.TariffRateRepository;
+import com.smu.tariff.tariff.BaseRateUtils;
 import com.smu.tariff.trade.dto.CountryTradeInsightsDto;
-import com.smu.tariff.trade.dto.PartnerMetricDto;
+import com.smu.tariff.trade.dto.PartnerTradeDetailsDto;
+import com.smu.tariff.trade.dto.PartnerTradeItemDto;
 import com.smu.tariff.trade.dto.ProductMetricDto;
 
 @Service
@@ -80,8 +81,9 @@ public class TradeAnalyticsService {
         // Generate top export categories (tariff rates FROM this country)  
         dto.topExports = generateTopProducts(exportTariffs);
 
-        // Generate major trading partners (countries with most tariff relationships)
-        dto.majorPartners = generateTradingPartners(importTariffs, exportTariffs);
+        // Generate major trading partners for imports and exports
+        dto.majorImportPartners = generatePartnerDetails(importTariffs, true);
+        dto.majorExportPartners = generatePartnerDetails(exportTariffs, false);
 
         // Calculate average tariffs
         dto.averageImportTariff = computeAverageTariff(importTariffs);
@@ -95,13 +97,20 @@ public class TradeAnalyticsService {
     }
 
     private BigDecimal computeAverageTariff(List<TariffRate> rates) {
+        BigDecimal zero = BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP);
         if (rates == null || rates.isEmpty()) {
-            return BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP);
+            return zero;
         }
-        BigDecimal sum = rates.stream()
-                .map(TariffRate::getBaseRate)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return sum.divide(BigDecimal.valueOf(rates.size()), 4, RoundingMode.HALF_UP);
+        List<BigDecimal> baseRates = rates.stream()
+                .map(this::normalizedBaseRate)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        if (baseRates.isEmpty()) {
+            return zero;
+        }
+        BigDecimal sum = baseRates.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal averageDecimal = sum.divide(BigDecimal.valueOf(baseRates.size()), 6, RoundingMode.HALF_UP);
+        return BaseRateUtils.toStoredPercentage(averageDecimal);
     }
 
     private List<ProductMetricDto> generateTopProducts(List<TariffRate> tariffRates) {
@@ -126,15 +135,15 @@ public class TradeAnalyticsService {
                     
                     // Calculate average base rate (as percentage) - handle nulls
                     List<BigDecimal> baseRates = rates.stream()
-                            .map(TariffRate::getBaseRate)
+                            .map(this::normalizedBaseRate)
                             .filter(Objects::nonNull)
                             .collect(Collectors.toList());
                     
                     if (!baseRates.isEmpty()) {
-                        dto.baseRate = baseRates.stream()
+                        BigDecimal avgDecimal = baseRates.stream()
                                 .reduce(BigDecimal.ZERO, BigDecimal::add)
-                                .divide(BigDecimal.valueOf(baseRates.size()), 4, RoundingMode.HALF_UP)
-                                .multiply(BigDecimal.valueOf(100)); // Convert to percentage
+                                .divide(BigDecimal.valueOf(baseRates.size()), 6, RoundingMode.HALF_UP);
+                        dto.baseRate = BaseRateUtils.toStoredPercentage(avgDecimal);
                     } else {
                         dto.baseRate = null;
                         logger.warn("No valid base rates found for product {}", productCode);
@@ -157,88 +166,55 @@ public class TradeAnalyticsService {
                     
                     logger.debug("Product {} summary: baseRate={}, additionalFee={}", productCode, dto.baseRate, dto.additionalFee);
                     
-                    // Use base rate percentage as the primary sorting value
-                    dto.totalValue = dto.baseRate;
+                    dto.totalValue = dto.baseRate != null ? dto.baseRate : BigDecimal.ZERO;
                     
                     return dto;
                 })
+                .filter(dto -> dto.totalValue != null)
                 .sorted((a, b) -> b.totalValue.compareTo(a.totalValue))
                 .limit(MAX_ITEMS)
                 .collect(Collectors.toList());
     }
 
-    private List<PartnerMetricDto> generateTradingPartners(List<TariffRate> importTariffs, 
-                                                          List<TariffRate> exportTariffs) {
-        Map<String, PartnerMetricDto> partnerMap = new HashMap<>();
-        
-        // Count import partners and calculate average base rate percentage
-        Map<String, List<TariffRate>> importPartners = importTariffs.stream()
-                .collect(Collectors.groupingBy(t -> t.getOrigin().getCode()));
-        
-        for (Map.Entry<String, List<TariffRate>> entry : importPartners.entrySet()) {
-            String code = entry.getKey();
-            List<TariffRate> rates = entry.getValue();
-            
-            PartnerMetricDto dto = new PartnerMetricDto();
-            dto.code = code;
-            dto.name = rates.get(0).getOrigin().getName();
-            
-            // Calculate average base rate as percentage - properly handle multiple rates
-            BigDecimal sum = rates.stream()
-                    .map(TariffRate::getBaseRate)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
-            BigDecimal avgBaseRate = sum.divide(BigDecimal.valueOf(rates.size()), 6, RoundingMode.HALF_UP);
-            
-            // Convert to percentage
-            BigDecimal avgBaseRatePercent = avgBaseRate.multiply(BigDecimal.valueOf(100));
-            
-            dto.totalValue = avgBaseRatePercent;
-            dto.rateCount = rates.size(); // Track how many rates went into this calculation
-            partnerMap.put(code, dto);
-        }
+    private List<PartnerTradeDetailsDto> generatePartnerDetails(List<TariffRate> tariffs, boolean isImport) {
+        Map<String, List<TariffRate>> grouped = tariffs.stream()
+                .collect(Collectors.groupingBy(rate -> isImport ? rate.getOrigin().getCode() : rate.getDestination().getCode()));
 
-        // Add export partners and their average tariff rates
-        Map<String, List<TariffRate>> exportPartners = exportTariffs.stream()
-                .collect(Collectors.groupingBy(t -> t.getDestination().getCode()));
-        
-        for (Map.Entry<String, List<TariffRate>> entry : exportPartners.entrySet()) {
-            String code = entry.getKey();
-            List<TariffRate> rates = entry.getValue();
-            
-            // Calculate average base rate as percentage - properly handle multiple rates
-            BigDecimal sum = rates.stream()
-                    .map(TariffRate::getBaseRate)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
-            BigDecimal avgBaseRate = sum.divide(BigDecimal.valueOf(rates.size()), 6, RoundingMode.HALF_UP);
-            
-            BigDecimal avgBaseRatePercent = avgBaseRate.multiply(BigDecimal.valueOf(100));
-            
-            PartnerMetricDto existing = partnerMap.get(code);
-            if (existing != null) {
-                // Properly combine import and export averages
-                // Take weighted average based on the number of rates
-                BigDecimal combinedSum = existing.totalValue.multiply(BigDecimal.valueOf(existing.rateCount))
-                        .add(avgBaseRatePercent.multiply(BigDecimal.valueOf(rates.size())));
-                int totalRates = existing.rateCount + rates.size();
-                existing.totalValue = combinedSum.divide(BigDecimal.valueOf(totalRates), 4, RoundingMode.HALF_UP);
-                existing.rateCount = totalRates;
-            } else {
-                PartnerMetricDto dto = new PartnerMetricDto();
-                dto.code = code;
-                dto.name = rates.get(0).getDestination().getName();
-                dto.totalValue = avgBaseRatePercent;
-                dto.rateCount = rates.size();
-                partnerMap.put(code, dto);
-            }
-        }
-
-        return partnerMap.values().stream()
-                .sorted((a, b) -> b.totalValue.compareTo(a.totalValue))
+        return grouped.entrySet().stream()
+                .map(entry -> {
+                    List<TariffRate> partnerRates = entry.getValue();
+                    PartnerTradeDetailsDto dto = new PartnerTradeDetailsDto();
+                    dto.code = entry.getKey();
+                    dto.name = isImport
+                            ? partnerRates.get(0).getOrigin().getName()
+                            : partnerRates.get(0).getDestination().getName();
+                    dto.itemCount = partnerRates.size();
+                    dto.items = partnerRates.stream()
+                            .sorted((a, b) -> b.getBaseRate().compareTo(a.getBaseRate()))
+                            .map(rate -> {
+                                PartnerTradeItemDto item = new PartnerTradeItemDto();
+                                item.categoryCode = rate.getProductCategory().getCode();
+                                item.categoryName = rate.getProductCategory().getName();
+                                item.baseRate = rate.getBaseRate();
+                                item.additionalFee = rate.getAdditionalFee();
+                                return item;
+                            })
+                            .collect(Collectors.toList());
+                    return dto;
+                })
+                .sorted((a, b) -> {
+                    int cmp = Integer.compare(b.itemCount, a.itemCount);
+                    if (cmp != 0) {
+                        return cmp;
+                    }
+                    return a.code.compareTo(b.code);
+                })
                 .limit(MAX_ITEMS)
                 .collect(Collectors.toList());
+    }
+
+    private BigDecimal normalizedBaseRate(TariffRate rate) {
+        return BaseRateUtils.fromStoredPercentage(rate.getBaseRate());
     }
 }
+

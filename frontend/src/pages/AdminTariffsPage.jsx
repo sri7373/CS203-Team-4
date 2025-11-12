@@ -9,17 +9,19 @@ import { AnimatePresence, motion } from "framer-motion";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import Select from "../components/Select.jsx";
 import {
-  COUNTRY_CODES,
+  COUNTRY_CODES as FALLBACK_COUNTRIES,
+  PRODUCT_CATEGORIES as FALLBACK_CATEGORIES,
   DEFAULT_DESTINATION_CODE,
   DEFAULT_ORIGIN_CODE,
   DEFAULT_PRODUCT_CATEGORY,
-  PRODUCT_CATEGORY_CODES,
 } from "../constants/referenceOptions.js";
 import api from "../services/api.js";
 import {
   fetchCountries,
   fetchProductCategories,
 } from "../services/reference.js";
+import { formatStoredPercent } from "../utils/percent.js";
+import { logout } from "../services/auth.js";
 
 const toOptionValue = (option) =>
   typeof option === "string" ? option : option?.value || "";
@@ -60,31 +62,64 @@ export default function AdminTariffsPage() {
   const [countries, setCountries] = useState([]);
   const [categories, setCategories] = useState([]);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { tariff, show }
+  const [countryForm, setCountryForm] = useState({ code: "", name: "" });
+  const [categoryForm, setCategoryForm] = useState({
+    code: "",
+    name: "",
+    hsCode: "",
+    weightBased: false,
+  });
+  const [countrySaving, setCountrySaving] = useState(false);
+  const [categorySaving, setCategorySaving] = useState(false);
+  const [countryModalOpen, setCountryModalOpen] = useState(false);
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [countryEditorCode, setCountryEditorCode] = useState(null);
+  const [categoryEditorCode, setCategoryEditorCode] = useState(null);
   const feedbackTimeoutRef = useRef(null);
 
-  const loadReferenceData = useCallback(async () => {
+  const loadReferenceData = useCallback(async (forceRefresh = false) => {
     setRefLoading(true);
     try {
       const [countryData, categoryData] = await Promise.all([
-        fetchCountries(),
-        fetchProductCategories(),
+        fetchCountries(forceRefresh),
+        fetchProductCategories(forceRefresh),
       ]);
-      const countryLookup = new Map(
-        countryData.map((item) => [item.code, item])
-      );
-      const categoryLookup = new Map(
-        categoryData.map((item) => [item.code, item])
-      );
-      const allowedCountries = COUNTRY_CODES.map((code) => ({
-        value: code,
-        label: code,
-        name: countryLookup.get(code)?.name || "",
-      }));
-      const allowedCategories = PRODUCT_CATEGORY_CODES.map((code) => ({
-        value: code,
-        label: code,
-        name: categoryLookup.get(code)?.name || "",
-      }));
+      const allowedCountries = countryData
+        .map((item) => {
+          const code = (item.code || "").toUpperCase();
+          if (!code) return null;
+          const name = item.name ? item.name.trim() : "";
+          return {
+            value: code,
+            label: name ? `${code} - ${name}` : code,
+            name: name || code,
+          };
+        })
+        .filter(Boolean);
+      const allowedCategories = categoryData
+        .map((item) => {
+          const code = (item.code || "").toUpperCase();
+          if (!code) return null;
+          const name = item.name ? item.name.trim() : "";
+          const hsCodeRaw =
+            item.hsCode ?? item.hs_code ?? code;
+          const hsCode =
+            typeof hsCodeRaw === "string"
+              ? hsCodeRaw.toUpperCase()
+              : String(hsCodeRaw || "").toUpperCase();
+          const weightRaw =
+            item.weightBased ??
+            item.weight_based ??
+            false;
+          return {
+            value: code,
+            label: name ? `${code} - ${name}` : code,
+            name: name || code,
+            hsCode,
+            weightBased: Boolean(weightRaw),
+          };
+        })
+        .filter(Boolean);
       setCountries(allowedCountries);
       setCategories(allowedCategories);
       setForm((prev) => ({
@@ -108,14 +143,27 @@ export default function AdminTariffsPage() {
       setReferenceError(null);
     } catch (err) {
       console.error("Failed to load reference data", err);
-      const fallbackCountries = COUNTRY_CODES.map((code) => ({
-        value: code,
-        label: code,
+      const fallbackCountries = FALLBACK_COUNTRIES.map((country) => ({
+        value: country.value ?? country.code,
+        label: country.label ?? country.name ?? country.value ?? country.code,
+        name: country.name ?? country.label ?? country.value ?? country.code,
       }));
-      const fallbackCategories = PRODUCT_CATEGORY_CODES.map((code) => ({
-        value: code,
-        label: code,
-      }));
+      const fallbackCategories = FALLBACK_CATEGORIES.map((category) => {
+        const rawValue = category.value ?? category.code ?? category;
+        const value = rawValue ? String(rawValue).toUpperCase() : "";
+        const labelSource = category.label ?? category.name ?? value;
+        const hsSource =
+          category.hsCode ?? category.hs_code ?? category.value ?? value;
+        return {
+          value,
+          label: labelSource,
+          name: labelSource,
+          hsCode: hsSource ? String(hsSource).toUpperCase() : "",
+          weightBased: Boolean(
+            category.weightBased ?? category.weight_based ?? false
+          ),
+        };
+      });
       setCountries(fallbackCountries);
       setCategories(fallbackCategories);
       setForm((prev) => ({
@@ -145,14 +193,24 @@ export default function AdminTariffsPage() {
   }, []);
 
   useEffect(() => {
-    loadReferenceData();
+    // Initial load
+    loadReferenceData(false);
+
+    // Refresh reference data every 5 minutes to stay in sync with database
+    const refreshInterval = setInterval(() => {
+      loadReferenceData(true);
+    }, 5 * 60 * 1000);
+
+    return () => {
+      clearInterval(refreshInterval);
+    };
   }, [loadReferenceData]);
 
   const loadTariffs = useCallback(async () => {
     setLoading(true);
     setListError(null);
     try {
-      const res = await api.get("/api/tariffs");
+      const res = await api.get("/tariffs");
       setTariffs(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Failed to load tariffs", err);
@@ -189,6 +247,8 @@ export default function AdminTariffsPage() {
         t.originCountryCode,
         t.destinationCountryCode,
         t.productCategoryCode,
+        t.hsCode,
+        t.weightValue,
       ]
         .filter(Boolean)
         .map(String)
@@ -259,6 +319,52 @@ export default function AdminTariffsPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const formatWeightDisplay = (tariff) => {
+    if (!tariff) return "-";
+    const numeric = Number(tariff.weightValue);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      const formatted =
+        Number.isInteger(numeric) ? numeric.toFixed(0) : numeric.toFixed(2);
+      return `${formatted} kg`;
+    }
+    if (tariff.weightBased) {
+      return "Required";
+    }
+    return "N/A";
+  };
+
+  const countryOptionsWithAction = useMemo(
+    () => [
+      ...countries,
+      { value: "__add_country__", label: "Manage Countries..." },
+    ],
+    [countries]
+  );
+
+  const categoryOptionsWithAction = useMemo(
+    () => [
+      ...categories,
+      { value: "__add_category__", label: "Manage Product Categories..." },
+    ],
+    [categories]
+  );
+
+  const handleCountrySelect = (key) => (value) => {
+    if (value === "__add_country__") {
+      openCountryManager();
+      return;
+    }
+    handleSelectChange(key)(value);
+  };
+
+  const handleCategorySelect = (value) => {
+    if (value === "__add_category__") {
+      openCategoryManager();
+      return;
+    }
+    handleSelectChange("productCategoryCode")(value);
+  };
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -266,6 +372,195 @@ export default function AdminTariffsPage() {
 
   const ensureReferenceValue = (value, options) =>
     listOptionValues(options).includes(value);
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/login";
+  };
+
+  const resetCountryForm = () => {
+    setCountryForm({ code: "", name: "" });
+    setCountryEditorCode(null);
+  };
+
+  const resetCategoryForm = () => {
+    setCategoryForm({ code: "", name: "", hsCode: "", weightBased: false });
+    setCategoryEditorCode(null);
+  };
+
+  const openCountryManager = () => {
+    resetCountryForm();
+    setCountryModalOpen(true);
+  };
+
+  const openCategoryManager = () => {
+    resetCategoryForm();
+    setCategoryModalOpen(true);
+  };
+
+  const handleCountryFormChange = (event) => {
+    const { name, value } = event.target;
+    setCountryForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const beginCountryEdit = (countryOption) => {
+    if (!countryOption) return;
+    setCountryForm({
+      code: countryOption.value,
+      name: countryOption.name || countryOption.label || countryOption.value,
+    });
+    setCountryEditorCode(countryOption.value);
+  };
+
+  const handleCategoryFormChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    setCategoryForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const beginCategoryEdit = (categoryOption) => {
+    if (!categoryOption) return;
+    setCategoryForm({
+      code: categoryOption.value,
+      name: categoryOption.name || categoryOption.label || categoryOption.value,
+      hsCode: categoryOption.hsCode || "",
+      weightBased: Boolean(categoryOption.weightBased),
+    });
+    setCategoryEditorCode(categoryOption.value);
+  };
+
+  const handleCountrySave = async (event) => {
+    event.preventDefault();
+    const code = countryForm.code.trim().toUpperCase();
+    const name = countryForm.name.trim();
+    if (!code || !name) {
+      showFeedback("Country code and name are required.", "error");
+      return;
+    }
+    const payload = { code, name };
+    setCountrySaving(true);
+    try {
+      if (countryEditorCode) {
+        await api.put(`/reference/countries/${encodeURIComponent(countryEditorCode)}`, payload);
+        showFeedback(`Country ${code} updated.`, "success");
+      } else {
+        await api.post("/reference/countries", payload);
+        showFeedback(`Country ${code} added.`, "success");
+      }
+      if (!countryEditorCode) {
+        resetCountryForm();
+      } else {
+        setCountryEditorCode(code);
+      }
+      await loadReferenceData(true);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.formattedMessage ||
+        err?.message ||
+        "Failed to add country";
+      showFeedback(msg, "error");
+    } finally {
+      setCountrySaving(false);
+    }
+  };
+
+  const handleCountryDelete = async (code) => {
+    if (!code) return;
+    if (!window.confirm(`Delete country ${code}? This will remove dependent tariffs.`)) {
+      return;
+    }
+    setCountrySaving(true);
+    try {
+      await api.delete(`/reference/countries/${encodeURIComponent(code)}`);
+      showFeedback(`Country ${code} deleted.`, "success");
+      if (countryEditorCode === code) {
+        resetCountryForm();
+      }
+      await loadReferenceData(true);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.formattedMessage ||
+        err?.message ||
+        "Failed to delete country";
+      showFeedback(msg, "error");
+    } finally {
+      setCountrySaving(false);
+    }
+  };
+
+  const handleCategorySave = async (event) => {
+    event.preventDefault();
+    const code = categoryForm.code.trim().toUpperCase();
+    const name = categoryForm.name.trim();
+    const hsCode = categoryForm.hsCode.trim().toUpperCase();
+    if (!code || !name || !hsCode) {
+      showFeedback("Category code, name and HS code are required.", "error");
+      return;
+    }
+    const payload = {
+      code,
+      name,
+      hsCode,
+      weightBased: categoryForm.weightBased,
+    };
+    setCategorySaving(true);
+    try {
+      if (categoryEditorCode) {
+        await api.put(
+          `/reference/product-categories/${encodeURIComponent(categoryEditorCode)}`,
+          payload
+        );
+        showFeedback(`Category ${code} updated.`, "success");
+      } else {
+        await api.post("/reference/product-categories", payload);
+        showFeedback(`Category ${code} added.`, "success");
+      }
+      if (!categoryEditorCode) {
+        resetCategoryForm();
+      } else {
+        setCategoryEditorCode(code);
+      }
+      await loadReferenceData(true);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.formattedMessage ||
+        err?.message ||
+        "Failed to add category";
+      showFeedback(msg, "error");
+    } finally {
+      setCategorySaving(false);
+    }
+  };
+
+  const handleCategoryDelete = async (code) => {
+    if (!code) return;
+    if (!window.confirm(`Delete product category ${code}? This removes dependent tariffs.`)) {
+      return;
+    }
+    setCategorySaving(true);
+    try {
+      await api.delete(`/reference/product-categories/${encodeURIComponent(code)}`);
+      showFeedback(`Category ${code} deleted.`, "success");
+      if (categoryEditorCode === code) {
+        resetCategoryForm();
+      }
+      await loadReferenceData(true);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.formattedMessage ||
+        err?.message ||
+        "Failed to delete category";
+      showFeedback(msg, "error");
+    } finally {
+      setCategorySaving(false);
+    }
+  };
 
   const buildPayload = () => ({
     originCountryCode: form.originCountryCode?.trim().toUpperCase(),
@@ -320,15 +615,15 @@ export default function AdminTariffsPage() {
     setSaving(true);
     try {
       if (editing) {
-        await api.put(`/api/tariffs/${editing.id}`, payload);
+        await api.put(`/tariffs/${editing.id}`, payload);
         setOperationStatus({ type: "update", id: editing.id });
-        showFeedback(`✓ Tariff #${editing.id} updated successfully`, "success");
+        showFeedback(`Tariff #${editing.id} updated successfully`, "success");
         resetForm();
       } else {
-        const response = await api.post("/api/tariffs", payload);
+        const response = await api.post("/tariffs", payload);
         const newId = response.data?.id || "new";
         setOperationStatus({ type: "create", id: newId });
-        showFeedback(`✓ Tariff created successfully (ID: ${newId})`, "success");
+        showFeedback(`Tariff created successfully (ID: ${newId})`, "success");
         resetForm();
       }
       await loadTariffs();
@@ -337,7 +632,7 @@ export default function AdminTariffsPage() {
       const errorMsg =
         err?.formattedMessage || err?.response?.data?.message || "Save failed";
       setFormError(errorMsg);
-      showFeedback(`✗ ${errorMsg}`, "error");
+      showFeedback(errorMsg, "error");
     } finally {
       setSaving(false);
     }
@@ -356,9 +651,9 @@ export default function AdminTariffsPage() {
     setDeletingId(tariff.id);
     setFormError(null);
     try {
-      await api.delete(`/api/tariffs/${tariff.id}`);
+      await api.delete(`/tariffs/${tariff.id}`);
       setOperationStatus({ type: "delete", id: tariff.id });
-      showFeedback(`✓ Tariff #${tariff.id} deleted successfully`, "success");
+      showFeedback(`Tariff #${tariff.id} deleted successfully`, "success");
       await loadTariffs();
       if (editing?.id === tariff.id) {
         resetForm();
@@ -370,7 +665,7 @@ export default function AdminTariffsPage() {
         err?.response?.data?.message ||
         "Delete failed";
       setFormError(errorMsg);
-      showFeedback(`✗ ${errorMsg}`, "error");
+      showFeedback(errorMsg, "error");
     } finally {
       setDeletingId(null);
     }
@@ -421,10 +716,10 @@ export default function AdminTariffsPage() {
               <Select
                 id="originCountryCode"
                 value={form.originCountryCode}
-                onChange={handleSelectChange("originCountryCode")}
-                options={countries}
+                onChange={handleCountrySelect("originCountryCode")}
+                options={countryOptionsWithAction}
                 disabled={refLoading || !countries.length}
-                placeholder={refLoading ? "Loading…" : "(Select)"}
+                placeholder={refLoading ? "Loading..." : "(Select)"}
               />
             </div>
             <div className="field" style={{ flex: "1 1 220px" }}>
@@ -434,10 +729,10 @@ export default function AdminTariffsPage() {
               <Select
                 id="destinationCountryCode"
                 value={form.destinationCountryCode}
-                onChange={handleSelectChange("destinationCountryCode")}
-                options={countries}
+                onChange={handleCountrySelect("destinationCountryCode")}
+                options={countryOptionsWithAction}
                 disabled={refLoading || !countries.length}
-                placeholder={refLoading ? "Loading…" : "(Select)"}
+                placeholder={refLoading ? "Loading..." : "(Select)"}
               />
             </div>
             <div className="field" style={{ flex: "1 1 220px" }}>
@@ -445,17 +740,17 @@ export default function AdminTariffsPage() {
               <Select
                 id="productCategoryCode"
                 value={form.productCategoryCode}
-                onChange={handleSelectChange("productCategoryCode")}
-                options={categories}
+                onChange={handleCategorySelect}
+                options={categoryOptionsWithAction}
                 disabled={refLoading || !categories.length}
-                placeholder={refLoading ? "Loading…" : "(Select)"}
+                placeholder={refLoading ? "Loading..." : "(Select)"}
               />
             </div>
           </div>
 
           <div className="inline-fields field-cluster">
             <div className="field" style={{ flex: "1 1 200px" }}>
-              <label htmlFor="baseRate">Base Rate (decimal)</label>
+              <label htmlFor="baseRate">Base Rate (%)</label>
               <input
                 id="baseRate"
                 className="input"
@@ -466,7 +761,7 @@ export default function AdminTariffsPage() {
                 value={form.baseRate}
                 onChange={handleChange}
                 required
-                placeholder="e.g. 0.05"
+                placeholder="e.g. 5 for 5%"
               />
             </div>
             <div className="field" style={{ flex: "1 1 200px" }}>
@@ -522,7 +817,7 @@ export default function AdminTariffsPage() {
                     style={{ width: 14, height: 14, marginRight: 8 }}
                     aria-hidden="true"
                   />
-                  {editing ? "Updating…" : "Creating…"}
+                  {editing ? "Updating..." : "Creating..."}
                 </>
               ) : editing ? (
                 "Update Tariff"
@@ -532,6 +827,14 @@ export default function AdminTariffsPage() {
             </button>
             <button type="button" onClick={resetForm} disabled={saving}>
               {editing ? "Cancel Edit" : "Clear"}
+            </button>
+            <button 
+              type="button" 
+              onClick={() => loadReferenceData(true)} 
+              disabled={refLoading}
+              title="Refresh country and category options from database"
+            >
+              {refLoading ? "Refreshing..." : "Refresh"}
             </button>
           </div>
 
@@ -612,8 +915,7 @@ export default function AdminTariffsPage() {
                 }}
                 aria-label="Dismiss notification"
               >
-                ✕
-              </button>
+                ✕              </button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -742,115 +1044,137 @@ export default function AdminTariffsPage() {
             animate={{ opacity: 1 }}
           >
             <div className="spinner" aria-hidden="true" />
-            <span>Loading tariffs…</span>
+            <span>Loading tariffs...</span>
           </motion.div>
         )}
 
         <AnimatePresence>
           {!loading && filteredTariffs.length > 0 && (
-            <motion.table
+            <motion.div
               key={filteredTariffs.map((t) => t.id).join("-")}
-              className="table-glow"
+              className="table-responsive"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
               style={{ marginTop: 16 }}
             >
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Origin</th>
-                  <th>Destination</th>
-                  <th>Category</th>
-                  <th>Base Rate</th>
-                  <th>Additional Fee</th>
-                  <th>Effective From</th>
-                  <th>Effective To</th>
-                  <th style={{ width: 140 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTariffs.map((tariff) => {
-                  const isHighlighted = editing?.id === tariff.id;
-                  const wasRecentlyModified =
-                    operationStatus?.id === tariff.id &&
-                    (operationStatus.type === "update" ||
-                      operationStatus.type === "create");
+              <table className="table-glow">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Origin</th>
+                    <th>Destination</th>
+                    <th>Category</th>
+                    <th>HS Code</th>
+                    <th>Weight</th>
+                    <th>Base Rate (%)</th>
+                    <th>Additional Fee</th>
+                    <th>Effective From</th>
+                    <th>Effective To</th>
+                    <th style={{ width: 140 }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTariffs.map((tariff) => {
+                    const isHighlighted = editing?.id === tariff.id;
+                    const wasRecentlyModified =
+                      operationStatus?.id === tariff.id &&
+                      (operationStatus.type === "update" ||
+                        operationStatus.type === "create");
 
-                  return (
-                    <motion.tr
-                      key={tariff.id}
-                      className={isHighlighted ? "row-highlight" : undefined}
-                      style={{
-                        backgroundColor: wasRecentlyModified
-                          ? "rgba(34, 197, 94, 0.1)"
-                          : undefined,
-                        transition: "background-color 2s ease-out",
-                      }}
-                      initial={
-                        operationStatus?.type === "create" &&
-                        operationStatus.id === tariff.id
-                          ? { opacity: 0, x: -20 }
-                          : false
-                      }
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-                    >
-                      <td>
-                        {wasRecentlyModified && (
-                          <span style={{ marginRight: 6 }}>
-                            {operationStatus.type === "create" ? "✨" : "💾"}
-                          </span>
-                        )}
-                        {tariff.id}
-                      </td>
-                      <td>{tariff.originCountryCode}</td>
-                      <td>{tariff.destinationCountryCode}</td>
-                      <td>{tariff.productCategoryCode}</td>
-                      <td>{tariff.baseRate}</td>
-                      <td>{tariff.additionalFee}</td>
-                      <td>{tariff.effectiveFrom}</td>
-                      <td>{tariff.effectiveTo || "-"}</td>
-                      <td>
-                        <div className="btn-group">
-                          <button
-                            type="button"
-                            onClick={() => beginEdit(tariff)}
-                            disabled={saving}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="danger"
-                            onClick={() => handleDelete(tariff)}
-                            disabled={deletingId === tariff.id || saving}
-                          >
-                            {deletingId === tariff.id ? (
-                              <>
-                                <span
-                                  className="spinner"
-                                  style={{
-                                    width: 12,
-                                    height: 12,
-                                    marginRight: 6,
-                                  }}
-                                  aria-hidden="true"
-                                />
-                                Deleting…
-                              </>
-                            ) : (
-                              "Delete"
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </tbody>
-            </motion.table>
+                    return (
+                      <motion.tr
+                        key={tariff.id}
+                        className={isHighlighted ? "row-highlight" : undefined}
+                        style={{
+                          backgroundColor: wasRecentlyModified
+                            ? "rgba(34, 197, 94, 0.1)"
+                            : undefined,
+                          transition: "background-color 2s ease-out",
+                        }}
+                        initial={
+                          operationStatus?.type === "create" &&
+                          operationStatus.id === tariff.id
+                            ? { opacity: 0, x: -20 }
+                            : false
+                        }
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                      >
+                        <td>
+                          {wasRecentlyModified && (
+                            <span
+                              style={{
+                                marginRight: 6,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color:
+                                  operationStatus.type === "create"
+                                    ? "var(--color-success)"
+                                    : "var(--color-primary)",
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              {operationStatus.type === "create" ? "NEW" : "EDIT"}
+                            </span>
+                          )}
+                          {tariff.id}
+                        </td>
+                        <td>{tariff.originCountryCode}</td>
+                        <td>{tariff.destinationCountryCode}</td>
+                        <td>{tariff.productCategoryCode}</td>
+                        <td>{tariff.hsCode || "-"}</td>
+                        <td>{formatWeightDisplay(tariff)}</td>
+                        <td>
+                          {tariff.baseRate != null
+                            ? formatStoredPercent(tariff.baseRate, "-", 4)
+                            : "-"}
+                        </td>
+                        <td>{tariff.additionalFee}</td>
+                        <td>{tariff.effectiveFrom}</td>
+                        <td>{tariff.effectiveTo || "-"}</td>
+                        <td>
+                          <div className="btn-group">
+                            <button
+                              type="button"
+                              className="btn-small"
+                              onClick={() => beginEdit(tariff)}
+                              disabled={saving}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-small danger"
+                              onClick={() => handleDelete(tariff)}
+                              disabled={deletingId === tariff.id || saving}
+                            >
+                              {deletingId === tariff.id ? (
+                                <>
+                                  <span
+                                    className="spinner"
+                                    style={{
+                                      width: 12,
+                                      height: 12,
+                                      marginRight: 6,
+                                    }}
+                                    aria-hidden="true"
+                                  />
+                                  Deleting...
+                                </>
+                              ) : (
+                                "Delete"
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </motion.div>
           )}
         </AnimatePresence>
 
@@ -868,8 +1192,11 @@ export default function AdminTariffsPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
           >
-            <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.5 }}>
-              📋
+            <div
+              style={{ fontSize: 32, marginBottom: 16, opacity: 0.6 }}
+              aria-hidden="true"
+            >
+              No data
             </div>
             <p style={{ margin: 0, fontSize: 16, fontWeight: 500 }}>
               {filter
@@ -884,6 +1211,279 @@ export default function AdminTariffsPage() {
           </motion.div>
         )}
       </div>
+
+      {countryModalOpen && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(5, 8, 20, 0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 999,
+            padding: 24,
+          }}
+        >
+          <div
+            className="card glass glow-border"
+            style={{ maxWidth: 720, width: "100%", padding: 24 }}
+          >
+            <h3 className="neon-text" style={{ marginBottom: 16 }}>
+              Manage Countries
+            </h3>
+            <div className="manage-drawer">
+              <div className="manage-list">
+                {countries.map((country) => (
+                  <div
+                    key={country.value}
+                    className={`manage-card ${
+                      countryEditorCode === country.value ? "active" : ""
+                    }`}
+                  >
+                    <div>
+                      <strong>{country.value}</strong>
+                      <div className="small">{country.name}</div>
+                    </div>
+                    <div className="manage-actions">
+                      <button
+                        type="button"
+                        className="btn-small"
+                        onClick={() => beginCountryEdit(country)}
+                        disabled={countrySaving}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-small danger"
+                        onClick={() => handleCountryDelete(country.value)}
+                        disabled={countrySaving}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {!countries.length && (
+                  <div className="small">No countries configured.</div>
+                )}
+              </div>
+              <div className="manage-form">
+                <form onSubmit={handleCountrySave}>
+                  <div className="field">
+                    <label htmlFor="modalCountryCode">Country Code</label>
+                    <input
+                      id="modalCountryCode"
+                      name="code"
+                      className="input"
+                      value={countryForm.code}
+                      onChange={handleCountryFormChange}
+                      placeholder="e.g. FRA"
+                      maxLength={3}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="modalCountryName">Country Name</label>
+                    <input
+                      id="modalCountryName"
+                      name="name"
+                      className="input"
+                      value={countryForm.name}
+                      onChange={handleCountryFormChange}
+                      placeholder="France"
+                    />
+                  </div>
+                  <div className="btn-group" style={{ marginTop: 16 }}>
+                    <button
+                      type="submit"
+                      className="btn-small"
+                      disabled={countrySaving}
+                    >
+                      {countrySaving
+                        ? "Saving..."
+                        : countryEditorCode
+                        ? "Update Country"
+                        : "Create Country"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-small"
+                      onClick={resetCountryForm}
+                      disabled={countrySaving}
+                    >
+                      New
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-small"
+                      onClick={() => {
+                        setCountryModalOpen(false);
+                        resetCountryForm();
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {categoryModalOpen && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(5, 8, 20, 0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 999,
+            padding: 24,
+          }}
+        >
+          <div
+            className="card glass glow-border"
+            style={{ maxWidth: 760, width: "100%", padding: 24 }}
+          >
+            <h3 className="neon-text" style={{ marginBottom: 16 }}>
+              Manage Product Categories
+            </h3>
+            <div className="manage-drawer">
+              <div className="manage-list">
+                {categories.map((category) => (
+                  <div
+                    key={category.value}
+                    className={`manage-card ${
+                      categoryEditorCode === category.value ? "active" : ""
+                    }`}
+                  >
+                    <div>
+                      <strong>{category.value}</strong>
+                      <div className="small">
+                        {category.name}
+                        {category.hsCode ? ` · HS ${category.hsCode}` : ""}
+                        {category.weightBased ? " · Weight" : ""}
+                      </div>
+                    </div>
+                    <div className="manage-actions">
+                      <button
+                        type="button"
+                        className="btn-small"
+                        onClick={() => beginCategoryEdit(category)}
+                        disabled={categorySaving}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-small danger"
+                        onClick={() => handleCategoryDelete(category.value)}
+                        disabled={categorySaving}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {!categories.length && (
+                  <div className="small">No product categories configured.</div>
+                )}
+              </div>
+              <div className="manage-form">
+                <form onSubmit={handleCategorySave}>
+                  <div className="field">
+                    <label htmlFor="modalCategoryCode">Category Code</label>
+                    <input
+                      id="modalCategoryCode"
+                      name="code"
+                      className="input"
+                      value={categoryForm.code}
+                      onChange={handleCategoryFormChange}
+                      placeholder="e.g. FOOD"
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="modalCategoryName">Category Name</label>
+                    <input
+                      id="modalCategoryName"
+                      name="name"
+                      className="input"
+                      value={categoryForm.name}
+                      onChange={handleCategoryFormChange}
+                      placeholder="Food & Beverages"
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="modalHsCode">HS Code</label>
+                    <input
+                      id="modalHsCode"
+                      name="hsCode"
+                      className="input"
+                      value={categoryForm.hsCode}
+                      onChange={handleCategoryFormChange}
+                      placeholder="210690"
+                    />
+                  </div>
+                  <div className="field checkbox-field">
+                    <label htmlFor="modalWeightBased">Weight Based</label>
+                    <input
+                      id="modalWeightBased"
+                      name="weightBased"
+                      type="checkbox"
+                      checked={categoryForm.weightBased}
+                      onChange={handleCategoryFormChange}
+                    />
+                  </div>
+                  <div className="btn-group" style={{ marginTop: 16 }}>
+                    <button
+                      type="submit"
+                      className="btn-small"
+                      disabled={categorySaving}
+                    >
+                      {categorySaving
+                        ? "Saving..."
+                        : categoryEditorCode
+                        ? "Update Category"
+                        : "Create Category"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-small"
+                      onClick={resetCategoryForm}
+                      disabled={categorySaving}
+                    >
+                      New
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-small"
+                      onClick={() => {
+                        setCategoryModalOpen(false);
+                        resetCategoryForm();
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </MotionWrapper>
   );
 }
+
+
+

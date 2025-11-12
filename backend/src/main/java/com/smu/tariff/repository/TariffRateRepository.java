@@ -1,7 +1,8 @@
-package com.smu.tariff.tariff;
+package com.smu.tariff.repository;
 
 import com.smu.tariff.country.Country;
-import com.smu.tariff.product.ProductCategory;
+import com.smu.tariff.model.ProductCategory;
+import com.smu.tariff.model.TariffRate;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -28,8 +29,21 @@ public interface TariffRateRepository extends JpaRepository<TariffRate, Long> {
 
     Optional<TariffRate> findTop1ByOriginAndDestinationAndProductCategoryOrderByEffectiveFromDesc(
             Country origin, Country destination, ProductCategory category);
+    
+    // Check if tariff rate exists for duplicate detection
+    boolean existsByOriginAndDestinationAndProductCategoryAndEffectiveFrom(
+            Country origin, Country destination, ProductCategory category, LocalDate effectiveFrom);
 
-    // Fallback: find the latest rate for a product category where baseRate > 0
     Optional<TariffRate> findFirstByProductCategoryAndBaseRateGreaterThanOrderByEffectiveFromDesc(
             ProductCategory category, java.math.BigDecimal threshold);
+    
+    // Fetch all with eager loading for building duplicate set
+    @Query("SELECT t FROM TariffRate t JOIN FETCH t.origin JOIN FETCH t.destination JOIN FETCH t.productCategory")
+    List<TariffRate> findAllWithRelations();
+
+    List<TariffRate> findByOrigin(Country origin);
+
+    List<TariffRate> findByDestination(Country destination);
+
+    List<TariffRate> findByProductCategory(ProductCategory productCategory);
 }

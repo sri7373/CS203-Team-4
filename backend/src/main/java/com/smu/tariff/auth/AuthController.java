@@ -1,5 +1,10 @@
 package com.smu.tariff.auth;
 
+import com.smu.tariff.security.JwtService;
+import com.smu.tariff.user.Role;
+import com.smu.tariff.user.User;
+import com.smu.tariff.user.UserRepository;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,8 +33,10 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public AuthController(AuthenticationManager authenticationManager, JwtService jwtService,
-                          UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AuthController(AuthenticationManager authenticationManager,
+                          JwtService jwtService,
+                          UserRepository userRepository,
+                          PasswordEncoder passwordEncoder) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.userRepository = userRepository;
@@ -47,15 +54,9 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
-        String normalizedUsername = request.username.trim();
-        String normalizedEmail = request.email.trim().toLowerCase();
-
-        if (normalizedUsername.isEmpty()) {
-            return ResponseEntity.badRequest().body("Username cannot be blank");
-        }
-        if (normalizedEmail.isEmpty()) {
-            return ResponseEntity.badRequest().body("Email cannot be blank");
-        }
+        // Bean Validation already checked blank or invalid fields
+        String normalizedUsername = request.getUsername().trim();
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
 
         if (userRepository.existsByUsername(normalizedUsername)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Username is taken");
@@ -77,3 +78,5 @@ public class AuthController {
         return ResponseEntity.ok(new AuthResponse(token, user.getUsername(), user.getRole().name()));
     }
 }
+
+
