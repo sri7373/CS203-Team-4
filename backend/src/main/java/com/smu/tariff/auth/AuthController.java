@@ -11,7 +11,18 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.smu.tariff.security.JwtService;
+import com.smu.tariff.security.util.PasswordValidator;
+import com.smu.tariff.user.Role;
+import com.smu.tariff.user.User;
+import com.smu.tariff.user.UserRepository;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -54,14 +65,14 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Email is taken");
         }
 
+        if (!PasswordValidator.isValid(request.getPassword())) {
+            return ResponseEntity.badRequest().body(
+                "Password must be at least 8 characters long (max 100), include uppercase, lowercase, a digit, and a special character."
+            );
+        }
         Role role = request.getRole() == null ? Role.USER : request.getRole();
-        User user = new User(
-                normalizedUsername,
-                normalizedEmail,
-                passwordEncoder.encode(request.getPassword()),
-                role
-        );
-
+        User user = new User(normalizedUsername, normalizedEmail,
+                passwordEncoder.encode(request.getPassword()), role);
         userRepository.save(user);
         String token = jwtService.generateToken(user);
         return ResponseEntity.ok(new AuthResponse(token, user.getUsername(), user.getRole().name()));

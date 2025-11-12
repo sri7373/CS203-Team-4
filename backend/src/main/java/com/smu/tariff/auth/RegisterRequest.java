@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Pattern;
 
-
 public class RegisterRequest {
 
     @NotBlank(message = "Username cannot be blank")
