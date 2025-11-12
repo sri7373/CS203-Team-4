@@ -38,7 +38,7 @@ public class TradeFlow {
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal tradeValue;
 
-    @Column(nullable = false)
+    @Column(name = "\"year\"", nullable = false)
     private int year;
 
     public TradeFlow() { }

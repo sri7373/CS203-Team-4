@@ -74,8 +74,13 @@ public class AuthController {
         User user = new User(normalizedUsername, normalizedEmail,
                 passwordEncoder.encode(request.getPassword()), role);
         userRepository.save(user);
+        
+        // Generate JWT token for the newly registered user
         String token = jwtService.generateToken(user);
-        return ResponseEntity.ok(new AuthResponse(token, user.getUsername(), user.getRole().name()));
+        
+        // Return JSON response with token, username, and role
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new AuthResponse(token, user.getUsername(), user.getRole().name()));
     }
 }
 

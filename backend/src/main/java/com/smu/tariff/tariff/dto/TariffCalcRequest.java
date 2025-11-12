@@ -18,4 +18,5 @@ public class TariffCalcRequest {
 
     public String effectiveFrom; // ISO yyyy-MM-dd optional filter
     public String effectiveTo;   // ISO yyyy-MM-dd optional filter
+    public String date; // legacy single-date field used by some tests (ISO yyyy-MM-dd)
 }

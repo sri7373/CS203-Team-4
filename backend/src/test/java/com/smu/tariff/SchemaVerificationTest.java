@@ -38,7 +38,7 @@ class SchemaVerificationTest {
 
         try (ResultSet rs = dataSource.getConnection()
                 .getMetaData()
-                .getColumns(null, null, "query_log", null)) {
+                .getColumns(null, null, "QUERY_LOG", null)) {
             while (rs.next()) {
                 String column = rs.getString("COLUMN_NAME");
                 if (expected.contains(column)) {

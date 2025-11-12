@@ -3,6 +3,8 @@ package com.smu.tariff.exception;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +15,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -57,11 +60,17 @@ public class GlobalExceptionHandler {
         logger.warn("Validation error: {}", ex.getMessage());
 
         Map<String, String> validationErrors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            validationErrors.put(fieldName, errorMessage);
-        });
+        // Process field errors in a single pass, preferring "must not be blank" messages.
+        for (FieldError fe : ex.getBindingResult().getFieldErrors()) {
+            String fieldName = fe.getField();
+            String msg = fe.getDefaultMessage();
+            if (!validationErrors.containsKey(fieldName)) {
+                validationErrors.put(fieldName, msg);
+            } else if (msg != null && msg.toLowerCase().contains("must not be blank")) {
+                // Prefer "must not be blank" message if present
+                validationErrors.put(fieldName, msg);
+            }
+        }
 
         Map<String, Object> response = new HashMap<>();
         response.put("timestamp", Instant.now());
@@ -72,6 +81,29 @@ public class GlobalExceptionHandler {
         response.put("validationErrors", validationErrors);
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingServletRequestParameter(MissingServletRequestParameterException ex, WebRequest request) {
+        logger.warn("Missing request parameter: {}", ex.getParameterName());
+
+        String userMessage;
+        // provide a friendly message for the 'country' parameter which is commonly used
+        if ("country".equals(ex.getParameterName())) {
+            userMessage = "Country code is required";
+        } else {
+            userMessage = "Required request parameter '" + ex.getParameterName() + "' is missing";
+        }
+
+        ErrorResponse error = new ErrorResponse(
+            Instant.now(),
+            HttpStatus.BAD_REQUEST.value(),
+            "Bad Request",
+            userMessage,
+            request.getDescription(false).replace("uri=", "")
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

@@ -1,5 +1,7 @@
 package com.smu.tariff.reference;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class ReferenceOptionDto {
     public final String code;
     public final String name;

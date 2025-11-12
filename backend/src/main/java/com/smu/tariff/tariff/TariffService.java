@@ -70,17 +70,20 @@ public class TariffService {
     }
 
     public TariffCalcResponse calculate(TariffCalcRequest req, boolean includeSummary) {
+        if (req.declaredValue == null || req.declaredValue <= 0) {
+            throw new InvalidTariffRequestException("Declared value must be greater than 0");
+        }
         if (req.originCountryCode == null || req.originCountryCode.trim().isEmpty()) {
             throw new InvalidTariffRequestException("Origin country code is required");
         }
         if (req.destinationCountryCode == null || req.destinationCountryCode.trim().isEmpty()) {
             throw new InvalidTariffRequestException("Destination country code is required");
         }
+        if (req.productCategoryCode == null || req.productCategoryCode.trim().isEmpty()) {
+            throw new InvalidTariffRequestException("Product category code is required");
+        }
         if (req.hsCode == null || req.hsCode.trim().isEmpty()) {
             throw new InvalidTariffRequestException("HS code is required");
-        }
-        if (req.declaredValue == null || req.declaredValue <= 0) {
-            throw new InvalidTariffRequestException("Declared value must be greater than 0");
         }
 
         LocalDate requestedFrom = parseIsoDate(req.effectiveFrom);

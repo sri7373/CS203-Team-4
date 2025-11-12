@@ -1,0 +1,470 @@
+package com.smu.tariff;
+
+import com.smu.tariff.country.Country;
+import com.smu.tariff.country.CountryRepository;
+import com.smu.tariff.logging.QueryLogRepository;
+import com.smu.tariff.model.ProductCategory;
+import com.smu.tariff.model.TariffRate;
+import com.smu.tariff.repository.ProductCategoryRepository;
+import com.smu.tariff.repository.TariffRateRepository;
+import com.smu.tariff.user.Role;
+import com.smu.tariff.user.User;
+import com.smu.tariff.user.UserRepository;
+
+import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.*;
+
+/**
+ * Integration tests for TariffController using REST Assured.
+ * Tests follow BDD style with given-when-then pattern.
+ * 
+ * These tests run with a real HTTP server and full Spring context,
+ * testing the entire request-response cycle including:
+ * - Authentication and authorization
+ * - Request validation
+ * - Business logic
+ * - Response formatting
+ * 
+ * Uses H2 in-memory database for testing (isolated from production AWS database).
+ */
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test")
+class TariffControllerIntegrationTest {
+
+    @LocalServerPort
+    private int port;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private TariffRateRepository tariffRateRepository;
+    
+    @Autowired
+    private CountryRepository countryRepository;
+    
+    @Autowired
+    private ProductCategoryRepository productCategoryRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    
+    @Autowired
+    private QueryLogRepository queryLogRepository;
+
+    private String userJwtToken;
+    private String adminJwtToken;
+
+    @BeforeEach
+    void setUp() {
+        RestAssured.port = port;
+        RestAssured.baseURI = "http://localhost";
+
+        // Clear database before each test to avoid constraint violations
+        // Delete in correct order to respect foreign key constraints
+        queryLogRepository.deleteAll();  // Delete first because it references users
+        tariffRateRepository.deleteAll();
+        productCategoryRepository.deleteAll();
+        countryRepository.deleteAll();
+        userRepository.deleteAll();
+
+        // Setup test data in H2 database (not AWS!)
+        setupTestData();
+
+        // Create test users if they don't exist
+        setupTestUsers();
+
+        // Authenticate and extract JWT tokens
+    userJwtToken = authenticateAndGetToken("testuser", "validPass123");
+        adminJwtToken = authenticateAndGetToken("testadmin", "admin123");
+    }
+    
+    private void setupTestData() {
+        // Create test countries if they don't exist
+        Country singapore = countryRepository.findByCode("SGP")
+            .orElseGet(() -> {
+                Country country = new Country();
+                country.setCode("SGP");
+                country.setName("Singapore");
+                return countryRepository.save(country);
+            });
+            
+        Country usa = countryRepository.findByCode("USA")
+            .orElseGet(() -> {
+                Country country = new Country();
+                country.setCode("USA");
+                country.setName("United States");
+                return countryRepository.save(country);
+            });
+            
+        Country japan = countryRepository.findByCode("JPN")
+            .orElseGet(() -> {
+                Country country = new Country();
+                country.setCode("JPN");
+                country.setName("Japan");
+                return countryRepository.save(country);
+            });
+        
+        // Create test product categories if they don't exist (using constructor without description)
+        ProductCategory electronics = productCategoryRepository.findByCode("ELEC")
+            .orElseGet(() -> productCategoryRepository.save(new ProductCategory("ELEC", "Electronics")));
+            
+        ProductCategory food = productCategoryRepository.findByCode("FOOD")
+            .orElseGet(() -> productCategoryRepository.save(new ProductCategory("FOOD", "Food & Beverages")));
+            
+        ProductCategory textiles = productCategoryRepository.findByCode("TEXT")
+            .orElseGet(() -> productCategoryRepository.save(new ProductCategory("TEXT", "Textiles")));
+        
+        // Create test tariff rates
+        // Note: H2 database is fresh for each test, so we can safely create without checking existence
+        
+        // SGP -> USA, Electronics: 5% + $10
+        TariffRate rate1 = new TariffRate(
+            singapore, 
+            usa, 
+            electronics,
+            BigDecimal.valueOf(5.0),
+            BigDecimal.valueOf(10.0),
+            LocalDate.now(),
+            LocalDate.now().plusYears(1)
+        );
+        tariffRateRepository.save(rate1);
+        
+        // USA -> JPN, Food: 3% + $5
+        TariffRate rate2 = new TariffRate(
+            usa,
+            japan,
+            food,
+            BigDecimal.valueOf(3.0),
+            BigDecimal.valueOf(5.0),
+            LocalDate.now(),
+            LocalDate.now().plusYears(1)
+        );
+        tariffRateRepository.save(rate2);
+    }
+
+    private void setupTestUsers() {
+        // Create regular user if not exists
+        if (!userRepository.existsByUsername("testuser")) {
+            User user = new User(
+                "testuser", 
+                "testuser@example.com",
+                passwordEncoder.encode("validPass123"),
+                Role.USER
+            );
+            userRepository.save(user);
+        }
+
+        // Create admin user if not exists
+        if (!userRepository.existsByUsername("testadmin")) {
+            User admin = new User(
+                "testadmin",
+                "admin@example.com",
+                passwordEncoder.encode("adminPass123"),
+                Role.ADMIN
+            );
+            userRepository.save(admin);
+        }
+    }
+
+    private String authenticateAndGetToken(String username, String password) {
+        String requestBody = String.format(
+            "{\"username\":\"%s\",\"password\":\"%s\"}", 
+            username, 
+            password
+        );
+
+        return given()
+            .contentType(ContentType.JSON)
+            .body(requestBody)
+        .when()
+            .post("/api/auth/login")
+        .then()
+            .statusCode(200)
+            .extract()
+            .path("token");
+    }
+
+    // ==================== Calculate Endpoint Tests ====================
+    
+    // TODO: These tests currently FAIL with 500 errors because the database lacks tariff rate data.
+    // This is a known bug - the application should return proper status codes when data is missing.
+    // Fix by either:
+    // 1. Adding test data setup (e.g., @Sql scripts to populate countries/products/tariff rates), OR
+    // 2. Fixing the application to handle missing data gracefully (return 404/400 instead of 500)
+
+    @Test
+    void calculateTariff_ShouldReturnValidResponse_WhenValidRequestProvided() {
+        // Given: A valid tariff calculation request
+        String requestBody = """
+            {
+                "originCountryCode": "SGP",
+                "destinationCountryCode": "USA",
+                "productCategoryCode": "ELEC",
+                "declaredValue": 1000.0
+            }
+            """;
+
+        // When: POST request is made to /api/tariffs/calculate
+        // Then: Should return 200 OK with valid response structure
+        given()
+            .header("Authorization", "Bearer " + userJwtToken)
+            .contentType(ContentType.JSON)
+            .body(requestBody)
+        .when()
+            .post("/api/tariffs/calculate")
+        .then()
+            .statusCode(200)
+            .contentType(ContentType.JSON)
+            .body("originCountryCode", equalTo("SGP"))
+            .body("destinationCountryCode", equalTo("USA"))
+            .body("productCategoryCode", equalTo("ELEC"))
+            .body("declaredValue", notNullValue())
+            .body("baseRate", notNullValue())
+            .body("tariffAmount", notNullValue())
+            .body("additionalFee", notNullValue())
+            .body("totalCost", notNullValue())
+            .body("effectiveDate", notNullValue());
+    }
+
+    @Test
+    void calculateTariff_ShouldReturn400_WhenOriginCountryIsNull() {
+        // Given: Request with missing origin country
+        String requestBody = """
+            {
+                "destinationCountryCode": "USA",
+                "productCategoryCode": "ELEC",
+                "declaredValue": 1000.0
+            }
+            """;
+
+        // When: POST request is made
+        // Then: Should return 400 Bad Request
+        given()
+            .header("Authorization", "Bearer " + userJwtToken)
+            .contentType(ContentType.JSON)
+            .body(requestBody)
+        .when()
+            .post("/api/tariffs/calculate")
+        .then()
+            .statusCode(400);
+    }
+
+    @Test
+    void calculateTariff_ShouldReturn400_WhenDeclaredValueIsNegative() {
+        // Given: Request with negative declared value
+        String requestBody = """
+            {
+                "originCountryCode": "SGP",
+                "destinationCountryCode": "USA",
+                "productCategoryCode": "ELEC",
+                "declaredValue": -100.0
+            }
+            """;
+
+        // When: POST request is made
+        // Then: Should return 400 Bad Request
+        given()
+            .header("Authorization", "Bearer " + userJwtToken)
+            .contentType(ContentType.JSON)
+            .body(requestBody)
+        .when()
+            .post("/api/tariffs/calculate")
+        .then()
+            .statusCode(400);
+    }
+
+    @Test
+    void calculateTariff_ShouldReturn400_WhenInvalidCountryCode() {
+        // Given: Request with invalid country code
+        String requestBody = """
+            {
+                "originCountryCode": "INVALID",
+                "destinationCountryCode": "USA",
+                "productCategoryCode": "ELEC",
+                "declaredValue": 1000.0
+            }
+            """;
+
+        // When: POST request is made
+        // Then: Should return 400 Bad Request
+        given()
+            .header("Authorization", "Bearer " + userJwtToken)
+            .contentType(ContentType.JSON)
+            .body(requestBody)
+        .when()
+            .post("/api/tariffs/calculate")
+        .then()
+            .statusCode(400);
+    }
+
+    @Test
+    void searchTariffs_ShouldReturnResults_WhenValidFiltersProvided() {
+        // Given: Valid search parameters
+        // When: GET request is made to /api/tariffs/rates with filters
+        // Then: Should return 200 OK with array of results
+        given()
+            .header("Authorization", "Bearer " + userJwtToken)
+            .queryParam("origin", "SGP")
+            .queryParam("destination", "USA")
+            .queryParam("category", "ELEC")
+        .when()
+            .get("/api/tariffs/rates")
+        .then()
+            .statusCode(200)
+            .contentType(ContentType.JSON)
+            .body("$", isA(java.util.List.class));
+    }
+
+    @Test
+    void searchTariffs_ShouldReturnAllResults_WhenNoFiltersProvided() {
+        // Given: No search parameters
+        // When: GET request is made without filters
+        // Then: Should return 200 OK with all tariffs
+        given()
+            .header("Authorization", "Bearer " + userJwtToken)
+        .when()
+            .get("/api/tariffs/rates")
+        .then()
+            .statusCode(200)
+            .contentType(ContentType.JSON)
+            .body("$", isA(java.util.List.class));
+    }
+
+    // ==================== Authentication Tests ====================
+
+    @Test
+    void protectedEndpoint_ShouldReturn401_WhenNoAuthenticationProvided() {
+        // Given: No authentication token
+        // When: Request is made to a protected endpoint
+        // Then: Should return 401 Unauthorized
+        // Note: Update the endpoint if your protected endpoints are different
+        given()
+            .contentType(ContentType.JSON)
+        .when()
+            .get("/api/tariff/admin/all") // Assuming this is admin-only
+        .then()
+            .statusCode(anyOf(is(401), is(403)));
+    }
+
+    // ==================== Admin Endpoint Tests (DISABLED) ====================
+    // NOTE: These tests are commented out because the admin endpoints
+    // (/api/tariff/admin/*) do not exist in the current TariffController.
+    // Uncomment and update these tests if admin endpoints are added in the future.
+
+    /*
+    @Test
+    void protectedEndpoint_ShouldReturn200_WhenValidAuthenticationProvided() {
+        // Given: Valid JWT token for admin user
+        // When: Request is made with authentication
+        // Then: Should return 200 OK
+        given()
+            .header("Authorization", "Bearer " + adminJwtToken)
+        .when()
+            .get("/api/tariff/admin/all")
+        .then()
+            .statusCode(200);
+    }
+
+    @Test
+    void adminEndpoint_ShouldReturn403_WhenNonAdminUserAttempts() {
+        // Given: Valid JWT token for regular user (not admin)
+        // When: Request is made to admin-only endpoint
+        // Then: Should return 403 Forbidden
+        given()
+            .header("Authorization", "Bearer " + userJwtToken)
+        .when()
+            .get("/api/tariff/admin/all")
+        .then()
+            .statusCode(403);
+    }
+
+    // ==================== CRUD Operations (Admin Only) ====================
+
+    @Test
+    void createTariff_ShouldReturn201_WhenAdminCreatesValidTariff() {
+        // Given: Valid tariff creation request with admin token
+        String newTariffJson = """
+            {
+                "originCountryCode": "SGP",
+                "destinationCountryCode": "JPN",
+                "productCategoryCode": "ELEC",
+                "baseRate": 0.08,
+                "additionalFee": 15.00,
+                "effectiveFrom": "2025-01-01"
+            }
+            """;
+
+        // When: POST request is made to create tariff
+        // Then: Should return 201 Created
+        given()
+            .header("Authorization", "Bearer " + adminJwtToken)
+            .contentType(ContentType.JSON)
+            .body(newTariffJson)
+        .when()
+            .post("/api/tariff/admin")
+        .then()
+            .statusCode(anyOf(is(200), is(201)))
+            .contentType(ContentType.JSON)
+            .body("originCountryCode", equalTo("SGP"))
+            .body("destinationCountryCode", equalTo("JPN"));
+    }
+
+    @Test
+    void createTariff_ShouldReturn403_WhenNonAdminAttempts() {
+        // Given: Valid tariff creation request with regular user token
+        String newTariffJson = """
+            {
+                "originCountryCode": "SGP",
+                "destinationCountryCode": "JPN",
+                "productCategoryCode": "ELEC",
+                "baseRate": 0.08,
+                "additionalFee": 15.00,
+                "effectiveFrom": "2025-01-01"
+            }
+            """;
+
+        // When: POST request is made by non-admin user
+        // Then: Should return 403 Forbidden
+        given()
+            .header("Authorization", "Bearer " + userJwtToken)
+            .contentType(ContentType.JSON)
+            .body(newTariffJson)
+        .when()
+            .post("/api/tariff/admin")
+        .then()
+            .statusCode(403);
+    }
+    */
+
+    // ==================== CORS Tests ====================
+
+    @Test
+    void corsHeaders_ShouldBePresent_ForPreflightRequest() {
+        // Given: A preflight OPTIONS request
+        // When: OPTIONS request is made
+        // Then: Should return appropriate CORS headers
+        given()
+            .header("Origin", "http://localhost:3000")
+            .header("Access-Control-Request-Method", "POST")
+        .when()
+            .options("/api/tariffs/calculate")
+        .then()
+            .statusCode(anyOf(is(200), is(204)))
+            .header("Access-Control-Allow-Origin", notNullValue());
+    }
+}

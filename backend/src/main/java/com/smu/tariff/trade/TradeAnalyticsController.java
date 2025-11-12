@@ -18,7 +18,13 @@ public class TradeAnalyticsController {
     }
 
     @GetMapping("/insights")
-    public ResponseEntity<CountryTradeInsightsDto> getInsights(@RequestParam("country") String countryCode) {
+    public ResponseEntity<CountryTradeInsightsDto> getInsights(@RequestParam(value = "country", required = false) String countryCode) {
+        // Make parameter optional at the framework level and validate explicitly so
+        // our application exception handling returns a friendly 400 response.
+        if (countryCode == null || countryCode.trim().isEmpty()) {
+            throw new com.smu.tariff.exception.InvalidTariffRequestException("Country code is required");
+        }
+
         return ResponseEntity.ok(tradeAnalyticsService.getCountryInsights(countryCode));
     }
 }
