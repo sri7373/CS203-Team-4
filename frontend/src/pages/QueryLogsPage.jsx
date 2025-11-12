@@ -285,12 +285,12 @@ export default function QueryLogsPage() {
               disabled={loading}
               aria-label="Refresh logs"
             >
-              {loading ? "Refreshing…" : "Refresh"}
+              {loading ? "Refreshing..." : "Refresh"}
             </button>
           </div>
         </div>
 
-        {loading && <div className="small">Loading…</div>}
+        {loading && <div className="small">Loading...</div>}
         {error && <div className="error">{error}</div>}
 
         {!loading && !error && (
@@ -415,4 +415,3 @@ export default function QueryLogsPage() {
     </MotionWrapper>
   );
 }
-

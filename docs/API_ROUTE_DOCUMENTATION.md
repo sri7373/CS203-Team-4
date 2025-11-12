@@ -55,7 +55,7 @@ All API routes are prefixed with `/api`
 
 **Controller**: `TariffController.java:28`
 
-#### POST /api/tariffs/calculate
+#### POST /api/tariffs/calculations
 - **Description**: Calculate tariff costs for a product shipment
 - **Authorization**: `USER` or `ADMIN`
 - **Request Body**: `TariffCalcRequest`
@@ -92,7 +92,7 @@ All API routes are prefixed with `/api`
   - 200: Success
   - 400: Invalid country/category code
 
-#### POST /api/tariffs/calculate/summary
+#### POST /api/tariffs/summaries
 - **Description**: Generate AI summary for existing calculation response
 - **Authorization**: `USER` or `ADMIN`
 - **Request Body**: `TariffCalcResponse`
@@ -101,7 +101,7 @@ All API routes are prefixed with `/api`
   - 200: Success
   - 400: Invalid response object
 
-#### POST /api/tariffs/calculate/pdf
+#### POST /api/tariffs/calculations/pdf
 - **Description**: Generate PDF report for tariff calculation
 - **Authorization**: `USER` or `ADMIN`
 - **Request Body**: `TariffCalcRequest`
@@ -288,7 +288,7 @@ All errors return standardized `ErrorResponse`:
   "status": 400,
   "error": "Bad Request",
   "message": "Descriptive error message",
-  "path": "/api/tariffs/calculate"
+  "path": "/api/tariffs/calculations"
 }
 ```
 
@@ -458,8 +458,8 @@ All errors return standardized `ErrorResponse`:
 ```
 1. GET /api/reference/countries → Get available countries
 2. GET /api/reference/product-categories → Get product categories
-3. POST /api/tariffs/calculate → Calculate tariff with AI summary
-4. Optional: POST /api/tariffs/calculate/pdf → Download PDF report
+3. POST /api/tariffs/calculations → Calculate tariff with AI summary
+4. Optional: POST /api/tariffs/calculations/pdf → Download PDF report
 5. GET /api/query-logs → View calculation history
 ```
 

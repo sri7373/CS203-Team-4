@@ -121,7 +121,7 @@ export default function RatesPage() {
           </div>
           <div className="btn-group" style={{ marginTop: 8 }}>
             <button className="primary" type="submit" disabled={loading}>
-              {loading ? "Searching…" : "Search"}
+              {loading ? "Searching..." : "Search"}
             </button>
             <button
               type="button"
@@ -158,53 +158,54 @@ export default function RatesPage() {
             animate={{ opacity: 1 }}
           >
             <div className="spinner" aria-hidden="true" />
-            <span className="small">Fetching matching tariff rates…</span>
+            <span className="small">Fetching matching tariff rates...</span>
           </motion.div>
         )}
 
         <div style={{ marginTop: 32 }}>
           <AnimatePresence mode="wait">
             {rows.length > 0 && !loading && (
-              <motion.table
-                aria-label="Tariff rates results"
-                className="table-glow"
+              <motion.div
+                className="table-responsive"
                 key={rows.map((r) => r.id).join(",")}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.45, ease: [0.4, 0.0, 0.2, 1] }}
               >
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Origin</th>
-                    <th>Destination</th>
-                    <th>Category</th>
-                    <th>Base Rate (%)</th>
-                    <th>Additional Fee</th>
-                    <th>Effective From</th>
-                    <th>Effective To</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.id}>
-                      <td>{r.id}</td>
-                      <td>{r.originCountryCode}</td>
-                      <td>{r.destinationCountryCode}</td>
-                      <td>{r.productCategoryCode}</td>
-                      <td>
-                        {r.baseRate != null
-                          ? formatStoredPercent(r.baseRate)
-                          : "-"}
-                      </td>
-                      <td>{r.additionalFee}</td>
-                      <td>{r.effectiveFrom}</td>
-                      <td>{r.effectiveTo || "-"}</td>
+                <table aria-label="Tariff rates results" className="table-glow">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Origin</th>
+                      <th>Destination</th>
+                      <th>Category</th>
+                      <th>Base Rate (%)</th>
+                      <th>Additional Fee</th>
+                      <th>Effective From</th>
+                      <th>Effective To</th>
                     </tr>
-                  ))}
-                </tbody>
-              </motion.table>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={r.id}>
+                        <td>{r.id}</td>
+                        <td>{r.originCountryCode}</td>
+                        <td>{r.destinationCountryCode}</td>
+                        <td>{r.productCategoryCode}</td>
+                        <td>
+                          {r.baseRate != null
+                            ? formatStoredPercent(r.baseRate)
+                            : "-"}
+                        </td>
+                        <td>{r.additionalFee}</td>
+                        <td>{r.effectiveFrom}</td>
+                        <td>{r.effectiveTo || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </motion.div>
             )}
           </AnimatePresence>
           {!loading && rows.length === 0 && (
@@ -217,3 +218,4 @@ export default function RatesPage() {
     </MotionWrapper>
   );
 }
+

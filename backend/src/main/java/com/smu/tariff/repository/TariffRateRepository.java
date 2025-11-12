@@ -40,4 +40,10 @@ public interface TariffRateRepository extends JpaRepository<TariffRate, Long> {
     // Fetch all with eager loading for building duplicate set
     @Query("SELECT t FROM TariffRate t JOIN FETCH t.origin JOIN FETCH t.destination JOIN FETCH t.productCategory")
     List<TariffRate> findAllWithRelations();
+
+    List<TariffRate> findByOrigin(Country origin);
+
+    List<TariffRate> findByDestination(Country destination);
+
+    List<TariffRate> findByProductCategory(ProductCategory productCategory);
 }

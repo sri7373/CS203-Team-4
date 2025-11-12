@@ -156,8 +156,8 @@ NewsDataResponse (API → Client)
 └────┬──────┘
      │
      │ 3. Build NewsDataRequest with filters:
-     │    - query: "tariff OR trade OR customs"
-     │    - country: ["us"]
+     │    - query: "(tariff OR ""import duty"" OR ""customs duty"") AND trade"
+     │    - country: ["us"]`r`n     - productCategory (optional): appended as AND ""<category>"" inside the query when supplied
      │    - category: ["business", "politics"]
      │    - language: ["en"]
      │    - size: 10
@@ -170,8 +170,8 @@ NewsDataResponse (API → Client)
      │ 4. Build URL:
      │    https://newsdata.io/api/1/latest
      │      ?apikey=YOUR_API_KEY
-     │      &q=tariff%20OR%20trade%20OR%20customs
-     │      &country=us
+     │      &q=(tariff%20OR%20%22import%20duty%22%20OR%20%22customs%20duty%22)%20AND%20trade%20%5Bplus%20%22<category>%22%20if%20productCategory%20was%20provided%5D
+     │      &country=us`r`n      &productCategory=steel  (frontend passes uppercase HS category; backend injects as quoted keyword)
      │      &category=business,politics
      │      &language=en
      │      &size=10
@@ -558,3 +558,7 @@ This integration provides:
 **API Key Required**: `newsdata.api.key` in `application.yml`
 **Cost**: Free (200/day) → $199.99/mo (20,000/month)
 **Documentation**: See `docs/newsdata-integration.md`
+
+
+
+

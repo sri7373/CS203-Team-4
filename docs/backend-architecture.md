@@ -86,7 +86,7 @@ backend/
 
 #### Key Endpoints:
 
-- `POST /api/tariffs/calculate`: Calculate tariff costs
+- `POST /api/tariffs/calculations`: Calculate tariff costs
 - `GET /api/tariffs/rates`: Search tariff rates
 - `POST /api/tariffs`: Admin-only tariff creation
 - `PUT /api/tariffs/{id}`: Admin-only tariff updates
@@ -228,7 +228,7 @@ graph TB
 
     %% Frontend to Backend Communication
     FE -->|HTTP Requests with JWT| API
-    API -->|POST /api/tariffs/calculate<br/>TariffCalcRequest JSON| TC
+    API -->|POST /api/tariffs/calculations<br/>TariffCalcRequest JSON| TC
     API -->|POST /api/auth/login<br/>AuthRequest JSON| AC
     API -->|GET /api/reference/countries| RC
     API -->|GET /api/trade/insights?country=SGP| TAC
@@ -346,7 +346,7 @@ graph TB
 3. **Key Frontend-Backend Interactions**:
 
    - **Login/Register**: `POST /api/auth/login`, `POST /api/auth/register`
-   - **Tariff Calculation**: `POST /api/tariffs/calculate`
+  - **Tariff Calculation**: `POST /api/tariffs/calculations`
    - **Reference Data**: `GET /api/reference/countries`, `GET /api/reference/product-categories`
    - **Trade Insights**: `GET /api/trade/insights?country={code}`
    - **Admin Operations**: CRUD operations on `/api/tariffs/*`
