@@ -4,11 +4,42 @@ import api from "../services/api.js";
 import Select from "./Select.jsx";
 import { useReferenceOptions } from "../hooks/useReferenceOptions.js";
 
+const ISO3_TO_ISO2 = {
+  SGP: "SG",
+  USA: "US",
+  CHN: "CN",
+  MYS: "MY",
+  IDN: "ID",
+  GBR: "GB",
+  JPN: "JP",
+  KOR: "KR",
+  IND: "IN",
+  DEU: "DE",
+  FRA: "FR",
+  CAN: "CA",
+  AUS: "AU",
+  MEX: "MX",
+  BRA: "BR",
+};
+
+const normalizeCountryCode = (code) => {
+  if (!code) return "";
+  const cleaned = code.trim().toUpperCase();
+  if (cleaned.length === 2) return cleaned.toLowerCase();
+  const mapped = ISO3_TO_ISO2[cleaned] || cleaned;
+  return mapped.toLowerCase();
+};
+
 export default function TariffNewsSidebar({ limit = 8 }) {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return window.innerWidth <= 768;
+  });
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const { countries, categories } = useReferenceOptions();
@@ -44,7 +75,10 @@ export default function TariffNewsSidebar({ limit = 8 }) {
     try {
       const params = new URLSearchParams();
       if (selectedCountry && selectedCountry !== "") {
-        params.append("country", selectedCountry.toLowerCase());
+        const normalizedCountry = normalizeCountryCode(selectedCountry);
+        if (normalizedCountry) {
+          params.append("country", normalizedCountry);
+        }
       }
       if (selectedCategory && selectedCategory !== "") {
         params.append("productCategory", selectedCategory.toLowerCase());

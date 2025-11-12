@@ -504,13 +504,13 @@ export default function AdminTariffsPage() {
       if (editing) {
         await api.put(`/tariffs/${editing.id}`, payload);
         setOperationStatus({ type: "update", id: editing.id });
-        showFeedback(`✁ETariff #${editing.id} updated successfully`, "success");
+        showFeedback(`Tariff #${editing.id} updated successfully`, "success");
         resetForm();
       } else {
         const response = await api.post("/tariffs", payload);
         const newId = response.data?.id || "new";
         setOperationStatus({ type: "create", id: newId });
-        showFeedback(`✁ETariff created successfully (ID: ${newId})`, "success");
+        showFeedback(`Tariff created successfully (ID: ${newId})`, "success");
         resetForm();
       }
       await loadTariffs();
@@ -519,7 +519,7 @@ export default function AdminTariffsPage() {
       const errorMsg =
         err?.formattedMessage || err?.response?.data?.message || "Save failed";
       setFormError(errorMsg);
-      showFeedback(`✁E${errorMsg}`, "error");
+      showFeedback(errorMsg, "error");
     } finally {
       setSaving(false);
     }
@@ -540,7 +540,7 @@ export default function AdminTariffsPage() {
     try {
       await api.delete(`/tariffs/${tariff.id}`);
       setOperationStatus({ type: "delete", id: tariff.id });
-      showFeedback(`✁ETariff #${tariff.id} deleted successfully`, "success");
+      showFeedback(`Tariff #${tariff.id} deleted successfully`, "success");
       await loadTariffs();
       if (editing?.id === tariff.id) {
         resetForm();
@@ -552,7 +552,7 @@ export default function AdminTariffsPage() {
         err?.response?.data?.message ||
         "Delete failed";
       setFormError(errorMsg);
-      showFeedback(`✗${errorMsg}`, "error");
+      showFeedback(errorMsg, "error");
     } finally {
       setDeletingId(null);
     }
@@ -606,7 +606,7 @@ export default function AdminTariffsPage() {
                 onChange={handleCountrySelect("originCountryCode")}
                 options={countryOptionsWithAction}
                 disabled={refLoading || !countries.length}
-                placeholder={refLoading ? "Loading…" : "(Select)"}
+                placeholder={refLoading ? "Loading..." : "(Select)"}
               />
             </div>
             <div className="field" style={{ flex: "1 1 220px" }}>
@@ -619,7 +619,7 @@ export default function AdminTariffsPage() {
                 onChange={handleCountrySelect("destinationCountryCode")}
                 options={countryOptionsWithAction}
                 disabled={refLoading || !countries.length}
-                placeholder={refLoading ? "Loading…" : "(Select)"}
+                placeholder={refLoading ? "Loading..." : "(Select)"}
               />
             </div>
             <div className="field" style={{ flex: "1 1 220px" }}>
@@ -630,7 +630,7 @@ export default function AdminTariffsPage() {
                 onChange={handleCategorySelect}
                 options={categoryOptionsWithAction}
                 disabled={refLoading || !categories.length}
-                placeholder={refLoading ? "Loading…" : "(Select)"}
+                placeholder={refLoading ? "Loading..." : "(Select)"}
               />
             </div>
           </div>
@@ -704,7 +704,7 @@ export default function AdminTariffsPage() {
                     style={{ width: 14, height: 14, marginRight: 8 }}
                     aria-hidden="true"
                   />
-                  {editing ? "Updating…" : "Creating…"}
+                  {editing ? "Updating..." : "Creating..."}
                 </>
               ) : editing ? (
                 "Update Tariff"
@@ -721,7 +721,7 @@ export default function AdminTariffsPage() {
               disabled={refLoading}
               title="Refresh country and category options from database"
             >
-              {refLoading ? "Refreshing…" : "Refresh"}
+              {refLoading ? "Refreshing..." : "Refresh"}
             </button>
           </div>
 
@@ -931,124 +931,137 @@ export default function AdminTariffsPage() {
             animate={{ opacity: 1 }}
           >
             <div className="spinner" aria-hidden="true" />
-            <span>Loading tariffs…</span>
+            <span>Loading tariffs...</span>
           </motion.div>
         )}
 
         <AnimatePresence>
           {!loading && filteredTariffs.length > 0 && (
-            <motion.table
+            <motion.div
               key={filteredTariffs.map((t) => t.id).join("-")}
-              className="table-glow"
+              className="table-responsive"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
               style={{ marginTop: 16 }}
             >
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Origin</th>
-                  <th>Destination</th>
-                  <th>Category</th>
-                  <th>HS Code</th>
-                  <th>Weight</th>
-                  <th>Base Rate (%)</th>
-                  <th>Additional Fee</th>
-                  <th>Effective From</th>
-                  <th>Effective To</th>
-                  <th style={{ width: 140 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTariffs.map((tariff) => {
-                  const isHighlighted = editing?.id === tariff.id;
-                  const wasRecentlyModified =
-                    operationStatus?.id === tariff.id &&
-                    (operationStatus.type === "update" ||
-                      operationStatus.type === "create");
+              <table className="table-glow">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Origin</th>
+                    <th>Destination</th>
+                    <th>Category</th>
+                    <th>HS Code</th>
+                    <th>Weight</th>
+                    <th>Base Rate (%)</th>
+                    <th>Additional Fee</th>
+                    <th>Effective From</th>
+                    <th>Effective To</th>
+                    <th style={{ width: 140 }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTariffs.map((tariff) => {
+                    const isHighlighted = editing?.id === tariff.id;
+                    const wasRecentlyModified =
+                      operationStatus?.id === tariff.id &&
+                      (operationStatus.type === "update" ||
+                        operationStatus.type === "create");
 
-                  return (
-                    <motion.tr
-                      key={tariff.id}
-                      className={isHighlighted ? "row-highlight" : undefined}
-                      style={{
-                        backgroundColor: wasRecentlyModified
-                          ? "rgba(34, 197, 94, 0.1)"
-                          : undefined,
-                        transition: "background-color 2s ease-out",
-                      }}
-                      initial={
-                        operationStatus?.type === "create" &&
-                        operationStatus.id === tariff.id
-                          ? { opacity: 0, x: -20 }
-                          : false
-                      }
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-                    >
-                      <td>
-                        {wasRecentlyModified && (
-                          <span style={{ marginRight: 6 }}>
-                            {operationStatus.type === "create" ? "✨" : "💾"}
-                          </span>
-                        )}
-                        {tariff.id}
-                      </td>
-                      <td>{tariff.originCountryCode}</td>
-                      <td>{tariff.destinationCountryCode}</td>
-                      <td>{tariff.productCategoryCode}</td>
-                      <td>{tariff.hsCode || "-"}</td>
-                      <td>{formatWeightDisplay(tariff)}</td>
-                      <td>
-                        {tariff.baseRate != null
-                          ? formatStoredPercent(tariff.baseRate, "-", 4)
-                          : "-"}
-                      </td>
-                      <td>{tariff.additionalFee}</td>
-                      <td>{tariff.effectiveFrom}</td>
-                      <td>{tariff.effectiveTo || "-"}</td>
-                      <td>
-                        <div className="btn-group">
-                          <button
-                            type="button"
-                            className="btn-small"
-                            onClick={() => beginEdit(tariff)}
-                            disabled={saving}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-small danger"
-                            onClick={() => handleDelete(tariff)}
-                            disabled={deletingId === tariff.id || saving}
-                          >
-                            {deletingId === tariff.id ? (
-                              <>
-                                <span
-                                  className="spinner"
-                                  style={{
-                                    width: 12,
-                                    height: 12,
-                                    marginRight: 6,
-                                  }}
-                                  aria-hidden="true"
-                                />
-                                Deleting…
-                              </>
-                            ) : (
-                              "Delete"
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </tbody>
-            </motion.table>
+                    return (
+                      <motion.tr
+                        key={tariff.id}
+                        className={isHighlighted ? "row-highlight" : undefined}
+                        style={{
+                          backgroundColor: wasRecentlyModified
+                            ? "rgba(34, 197, 94, 0.1)"
+                            : undefined,
+                          transition: "background-color 2s ease-out",
+                        }}
+                        initial={
+                          operationStatus?.type === "create" &&
+                          operationStatus.id === tariff.id
+                            ? { opacity: 0, x: -20 }
+                            : false
+                        }
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                      >
+                        <td>
+                          {wasRecentlyModified && (
+                            <span
+                              style={{
+                                marginRight: 6,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color:
+                                  operationStatus.type === "create"
+                                    ? "var(--color-success)"
+                                    : "var(--color-primary)",
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              {operationStatus.type === "create" ? "NEW" : "EDIT"}
+                            </span>
+                          )}
+                          {tariff.id}
+                        </td>
+                        <td>{tariff.originCountryCode}</td>
+                        <td>{tariff.destinationCountryCode}</td>
+                        <td>{tariff.productCategoryCode}</td>
+                        <td>{tariff.hsCode || "-"}</td>
+                        <td>{formatWeightDisplay(tariff)}</td>
+                        <td>
+                          {tariff.baseRate != null
+                            ? formatStoredPercent(tariff.baseRate, "-", 4)
+                            : "-"}
+                        </td>
+                        <td>{tariff.additionalFee}</td>
+                        <td>{tariff.effectiveFrom}</td>
+                        <td>{tariff.effectiveTo || "-"}</td>
+                        <td>
+                          <div className="btn-group">
+                            <button
+                              type="button"
+                              className="btn-small"
+                              onClick={() => beginEdit(tariff)}
+                              disabled={saving}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-small danger"
+                              onClick={() => handleDelete(tariff)}
+                              disabled={deletingId === tariff.id || saving}
+                            >
+                              {deletingId === tariff.id ? (
+                                <>
+                                  <span
+                                    className="spinner"
+                                    style={{
+                                      width: 12,
+                                      height: 12,
+                                      marginRight: 6,
+                                    }}
+                                    aria-hidden="true"
+                                  />
+                                  Deleting...
+                                </>
+                              ) : (
+                                "Delete"
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </motion.div>
           )}
         </AnimatePresence>
 
@@ -1066,8 +1079,11 @@ export default function AdminTariffsPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
           >
-            <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.5 }}>
-              📋
+            <div
+              style={{ fontSize: 32, marginBottom: 16, opacity: 0.6 }}
+              aria-hidden="true"
+            >
+              No data
             </div>
             <p style={{ margin: 0, fontSize: 16, fontWeight: 500 }}>
               {filter
@@ -1136,7 +1152,7 @@ export default function AdminTariffsPage() {
                   className="btn-small"
                   disabled={countrySaving}
                 >
-                  {countrySaving ? "Saving…" : "Save Country"}
+                  {countrySaving ? "Saving..." : "Save Country"}
                 </button>
                 <button
                   type="button"
@@ -1227,7 +1243,7 @@ export default function AdminTariffsPage() {
                   className="btn-small"
                   disabled={categorySaving}
                 >
-                  {categorySaving ? "Saving…" : "Save Category"}
+                  {categorySaving ? "Saving..." : "Save Category"}
                 </button>
                 <button
                   type="button"
@@ -1252,3 +1268,6 @@ export default function AdminTariffsPage() {
     </MotionWrapper>
   );
 }
+
+
+

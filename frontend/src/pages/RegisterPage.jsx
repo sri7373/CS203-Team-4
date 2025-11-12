@@ -218,7 +218,7 @@ export default function RegisterPage() {
         </div>
         <div className="btn-group" style={{ marginTop: 4 }}>
           <button className="primary" type="submit" disabled={loading}>
-            {loading ? "Creating…" : "Create account"}
+            {loading ? "Creating..." : "Create account"}
           </button>
           <Link to="/login">
             <button type="button" disabled={loading}>

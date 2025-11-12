@@ -196,7 +196,7 @@ export default function CalculatePage() {
 
       timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-      const response = await api.post("/tariffs/calculate/pdf", payload, {
+      const response = await api.post("/tariffs/calculations/pdf", payload, {
         responseType: "blob",
         signal: controller.signal,
         headers: { Accept: "application/pdf" },
@@ -257,10 +257,7 @@ export default function CalculatePage() {
     }
 
     try {
-      const { data } = await api.post(
-        "/tariffs/calculate/summary",
-        resultPayload
-      );
+      const { data } = await api.post("/tariffs/summaries", resultPayload);
       if (summaryRequestIdRef.current !== requestId) {
         return;
       }
@@ -337,7 +334,7 @@ export default function CalculatePage() {
       summaryRequestIdRef.current = requestId;
 
       const { data } = await api.post(
-        "/tariffs/calculate?includeSummary=false",
+        "/tariffs/calculations?includeSummary=false",
         payload
       );
       setRes(data);

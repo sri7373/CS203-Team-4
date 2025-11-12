@@ -4,8 +4,8 @@ import api from "../services/api.js";
 import { setAuth } from "../services/auth.js";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -110,7 +110,7 @@ export default function LoginPage() {
         </div>
         <div className="btn-group" style={{ marginTop: 4 }}>
           <button className="primary" type="submit" disabled={loading}>
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? "Signing in..." : "Sign in"}
           </button>
           <Link to="/register">
             <button type="button" disabled={loading}>

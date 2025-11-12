@@ -34,10 +34,10 @@ public class CalculateTariffController {
     }
 
     /**
-     * Calculate tariff endpoint.
+     * Tariff calculation estimate endpoint.
      * Request must include declaredValue. If product is weight-based, declaredValue will be multiplied by weight.
      */
-    @PostMapping("/calculate-tariff")
+    @PostMapping("/tariff-calculations")
     @Transactional(readOnly = true)
     public CalculateTariffResponseDto calculateTariff(@Valid @RequestBody CalculateTariffRequestDto req) {
         log.info("Received calculate-tariff request for product {}", req.getProductCode());

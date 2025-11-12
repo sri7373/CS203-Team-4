@@ -34,7 +34,7 @@ public class TariffController {
         this.tariffService = tariffService;
     }
 
-    @PostMapping("/calculate")
+    @PostMapping("/calculations")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public ResponseEntity<TariffCalcResponse> calculate(@Valid @RequestBody TariffCalcRequest request,
                                                          @RequestParam(value = "includeSummary", defaultValue = "true") boolean includeSummary) {
@@ -75,7 +75,7 @@ public class TariffController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/generate-summary")
+    @PostMapping("/summaries")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public ResponseEntity<java.util.Map<String, String>> generateSummary(@RequestBody TariffCalcResponse response) {
         String aiSummary = tariffService.generateAiSummary(response);
@@ -84,7 +84,7 @@ public class TariffController {
 
     //To generate PDF
     @CrossOrigin(origins = "http://localhost:3000")
-    @PostMapping(value = "/calculate/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PostMapping(value = "/calculations/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public ResponseEntity<byte[]> calculatePdf(@Valid @RequestBody TariffCalcRequest req) {
         TariffCalcResponse resp = tariffService.calculate(req);

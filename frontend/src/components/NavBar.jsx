@@ -37,7 +37,11 @@ export default function NavBar() {
           <span>TARIFFSHERIFF</span>
         </Link>
         {loggedIn && (
-          <>
+          <div
+            className="nav-links"
+            role="navigation"
+            aria-label="Application tabs"
+          >
             <Link
               to="/calculate"
               className={linkActive("/calculate") ? "active" : ""}
@@ -70,12 +74,14 @@ export default function NavBar() {
               <Link
                 to="/admin/tariffs"
                 className={linkActive("/admin/tariffs") ? "active" : ""}
-                aria-current={linkActive("/admin/tariffs") ? "page" : undefined}
+                aria-current={
+                  linkActive("/admin/tariffs") ? "page" : undefined
+                }
               >
                 Admin Console
               </Link>
             )}
-          </>
+          </div>
         )}
         <div className="right">
           <button
