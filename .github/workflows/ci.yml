@@ -37,7 +37,7 @@ jobs:
           java-version: '17'
           cache: 'maven'
 
-      - name: Run backend tests
+      - name: Run backend tests with coverage
         working-directory: ./backend
         env:
           DB_URL: jdbc:postgresql://localhost:5432/tariff_test
@@ -48,7 +48,7 @@ jobs:
           GEMINI_API_KEY: test-gemini-api-key
           NEWSDATA_API_KEY: test-newsdata-api-key
         run: |
-          mvn clean test
+          mvn -B clean verify
 
       - name: Upload test results
         if: always()
@@ -56,6 +56,15 @@ jobs:
         with:
           name: backend-test-results
           path: backend/target/surefire-reports/
+
+      - name: Upload JaCoCo coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: |
+            backend/target/site/jacoco
+            backend/target/jacoco*.xml
 
   frontend-test:
     name: Frontend Tests

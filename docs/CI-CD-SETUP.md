@@ -9,32 +9,38 @@ This project uses GitHub Actions for CI/CD with deployment to AWS infrastructure
 Runs on every push and pull request to `main`, `develop`, and feature branches.
 
 **What it does:**
-- ✅ Runs backend tests with PostgreSQL
-- ✅ Runs frontend tests and builds
-- ✅ Builds Docker images (without pushing)
-- ✅ Performs security scanning with Trivy
-- ✅ Generates test coverage reports
+- Runs backend tests against PostgreSQL via `mvn -B clean verify` (includes JaCoCo coverage gate and artifacts)
+- Runs frontend linting/tests and builds the production bundle
+- Builds backend/frontend Docker images (cache-only)
+- Performs security scanning with Trivy
+- Publishes Surefire + JaCoCo artifacts for download
 
 ### 2. **Staging Deployment** - `.github/workflows/cd-staging.yml`
 Automatically deploys to staging when code is pushed to `develop` branch.
 
 **What it does:**
-- ✅ Builds and pushes Docker images to AWS ECR
-- ✅ Deploys to staging EC2/ECS instance
-- ✅ Runs database migrations
-- ✅ Performs health checks
+- Builds and pushes Docker images to AWS ECR
+- Deploys to the staging EC2/ECS environment
+- Runs database migrations
+- Performs health checks before marking the deploy successful
 
 ### 3. **Production Deployment** - `.github/workflows/cd-production.yml`
 Deploys to production when code is pushed to `main` or when a version tag is created.
 
 **What it does:**
-- ✅ Builds and pushes production Docker images to AWS ECR
-- ✅ Creates backup before deployment
-- ✅ Blue-green deployment strategy for zero downtime
-- ✅ Runs database migrations
-- ✅ Performs smoke tests
-- ✅ Automatic rollback on failure
-- ✅ Creates GitHub release for version tags
+- Builds and pushes production Docker images to AWS ECR
+- Creates an application/DB backup before deployment
+- Executes blue-green deployment for zero downtime
+- Runs database migrations
+- Performs smoke tests
+- Rolls back automatically on failure
+- Creates GitHub releases for version tags
+
+### Coverage & Test Artifacts
+
+- JaCoCo thresholds live in `backend/pom.xml` (currently **10 % branch** / **25 % line**). Raise them as soon as coverage improves.
+- Every CI run uploads `backend-test-results` and `backend-coverage-report` artifacts. Download them from the workflow run (Actions -> CI -> Artifacts) to inspect JUnit XML or open `target/site/jacoco/index.html`.
+- If coverage fails locally or in CI, run `mvn clean verify` in `backend/` to reproduce; JaCoCo output lives under `backend/target`.
 
 ## Prerequisites
 
@@ -78,7 +84,7 @@ sudo systemctl start docker
 
 ### GitHub Secrets Configuration
 
-Go to your repository → Settings → Secrets and variables → Actions
+Go to your repository -> Settings -> Secrets and variables -> Actions
 
 Add the following secrets:
 
@@ -113,10 +119,10 @@ Add the following secrets:
 2. Make changes and push
 3. CI pipeline runs automatically (tests, builds, scans)
 4. Create PR to develop
-5. After PR approval and merge → auto-deploy to staging
+5. After PR approval and merge -> auto-deploy to staging
 6. Test in staging environment
 7. Create PR from develop to main
-8. After PR approval and merge → auto-deploy to production
+8. After PR approval and merge -> auto-deploy to production
 ```
 
 ### Emergency Hotfix Workflow
@@ -214,13 +220,13 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ## Security Best Practices
 
-1. ✅ Use AWS Secrets Manager for sensitive data
-2. ✅ Rotate SSH keys regularly
-3. ✅ Enable VPC for RDS and EC2
-4. ✅ Use HTTPS with SSL certificates (Let's Encrypt)
-5. ✅ Regular security scans (Trivy runs in CI)
-6. ✅ Keep dependencies updated
-7. ✅ Monitor AWS CloudWatch for anomalies
+1. Use AWS Secrets Manager (or Parameter Store) for sensitive data
+2. Rotate SSH keys regularly and disable unused accounts
+3. Keep RDS/EC2 inside a VPC with restricted security groups
+4. Enforce HTTPS end-to-end (Let's Encrypt or ACM)
+5. Run security scans frequently (Trivy in CI plus periodic AWS Inspector)
+6. Keep dependencies updated (dependabot + scheduled upgrades)
+7. Monitor AWS CloudWatch metrics/logs for anomalies
 
 ## Cost Optimization
 
@@ -233,13 +239,13 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ## Next Steps
 
-1. ✅ Set up SSL certificates with AWS Certificate Manager
-2. ✅ Configure CloudFront for CDN
-3. ✅ Set up AWS CloudWatch alarms
-4. ✅ Implement automated backups for RDS
-5. ✅ Add Slack/Discord notifications for deployments
-6. ✅ Set up monitoring with Prometheus/Grafana
-7. ✅ Implement feature flags for gradual rollouts
+1. Set up SSL certificates with AWS Certificate Manager
+2. Configure CloudFront for CDN/offloading
+3. Set up AWS CloudWatch alarms and dashboards
+4. Implement automated backups for RDS
+5. Add Slack/Discord notifications for deployments
+6. Set up monitoring with Prometheus/Grafana
+7. Implement feature flags for gradual rollouts
 
 ## Additional Resources
 
@@ -247,3 +253,15 @@ docker-compose -f docker-compose.prod.yml up -d
 - [AWS ECR Documentation](https://docs.aws.amazon.com/ecr/)
 - [AWS RDS Documentation](https://docs.aws.amazon.com/rds/)
 - [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)
+
+
+
+
+
+
+
+
+
+
+
+
