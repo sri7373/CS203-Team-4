@@ -24,8 +24,7 @@ public class PasswordValidator {
      * Validates if a password meets the security requirements.
      * 
      * @param password the password string to validate
-     * @return true if the password meets all requirements, false otherwise
-     * @throws NullPointerException if password is null
+     * @return true if the password meets all requirements, false otherwise (including null passwords)
      */
     public static boolean isValid(String password) {
         // Check for null password to prevent NullPointerException
