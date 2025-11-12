@@ -4,17 +4,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class ReferenceOptionDto {
     public final String code;
-    public final String label;
+    public final String name;
+    public final String hsCode;
+    public final Boolean weightBased;
 
-    public ReferenceOptionDto(String code, String label) {
-        this.code = code;
-        this.label = label;
+    public ReferenceOptionDto(String code, String name) {
+        this(code, name, null, null);
     }
 
-    // Backwards-compatible JSON property name for existing clients/tests that
-    // expect a `name` field. It mirrors `label`.
-    @JsonProperty("name")
-    public String getName() {
-        return label;
+    public ReferenceOptionDto(String code, String name, String hsCode, Boolean weightBased) {
+        this.code = code;
+        this.name = name;
+        this.hsCode = hsCode;
+        this.weightBased = weightBased;
     }
 }

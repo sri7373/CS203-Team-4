@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import Select from "../components/Select.jsx";
 import api from "../services/api.js";
+import { useReferenceOptions } from "../hooks/useReferenceOptions.js";
+import { formatStoredPercent } from "../utils/percent.js";
 
 const COUNTRIES = ["SGP", "USA", "CHN", "MYS", "IDN"];
 
@@ -13,22 +15,9 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-const percentFormatter = new Intl.NumberFormat("en-US", {
-  style: "percent",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
 const formatCurrency = (value) => {
   if (value === null || value === undefined) return "N/A";
   return currencyFormatter.format(Number(value));
-};
-
-const formatPercent = (value) => {
-  if (value === null || value === undefined) return "N/A";
-  // If value is already a percentage (like 5.25), divide by 100
-  const percentValue = Number(value) > 1 ? Number(value) / 100 : Number(value);
-  return percentFormatter.format(percentValue);
 };
 
 export default function InsightsPage() {
@@ -38,6 +27,28 @@ export default function InsightsPage() {
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
   const [lastLoadedCountry, setLastLoadedCountry] = useState(null);
+  const [expandedImportPartners, setExpandedImportPartners] = useState(
+    () => new Set()
+  );
+  const [expandedExportPartners, setExpandedExportPartners] = useState(
+    () => new Set()
+  );
+  const { countries } = useReferenceOptions();
+  const countryOptions = useMemo(() => {
+    if (countries && countries.length) {
+      return countries;
+    }
+    return COUNTRIES.map((code) => ({ value: code, label: code }));
+  }, [countries]);
+
+  useEffect(() => {
+    if (!countryOptions.length) {
+      return;
+    }
+    if (!countryOptions.some((opt) => opt.value === country)) {
+      setCountry(countryOptions[0].value);
+    }
+  }, [countryOptions, country]);
 
   const loadInsights = async () => {
     if (!country) {
@@ -67,6 +78,8 @@ export default function InsightsPage() {
       console.log("Trade insights loaded successfully:", response.data);
       setInsights(response.data);
       setLastLoadedCountry(country);
+      setExpandedImportPartners(new Set());
+      setExpandedExportPartners(new Set());
       setRetryCount(0); // Reset retry count on success
     } catch (err) {
       if (err.name !== "AbortError") {
@@ -112,11 +125,13 @@ export default function InsightsPage() {
   };
 
   const handleClear = () => {
-    setCountry("SGP");
+    setCountry(countryOptions[0]?.value || "SGP");
     setInsights(null);
     setError(null);
     setRetryCount(0);
     setLastLoadedCountry(null);
+    setExpandedImportPartners(new Set());
+    setExpandedExportPartners(new Set());
   };
 
   const handleRetry = () => {
@@ -126,40 +141,45 @@ export default function InsightsPage() {
     }
   };
 
+  const toggleImportPartner = (code) => {
+    setExpandedImportPartners((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) {
+        next.delete(code);
+      } else {
+        next.add(code);
+      }
+      return next;
+    });
+  };
+
+  const toggleExportPartner = (code) => {
+    setExpandedExportPartners((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) {
+        next.delete(code);
+      } else {
+        next.add(code);
+      }
+      return next;
+    });
+  };
+
   const renderProductList = (items = [], type = "import") => {
-    if (!items.length)
+    if (!items.length) {
       return (
         <motion.div
-          className="small"
-          style={{
-            marginTop: 8,
-            padding: 16,
-            textAlign: "center",
-            opacity: 0.7,
-            background: "rgba(255,255,255,0.05)",
-            borderRadius: 8,
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.7 }}
+          className="metric-card"
+          style={{ padding: 24, textAlign: "center" }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
         >
-          <p style={{ marginBottom: 8 }}>No {type} tariff data available.</p>
-          <p className="tiny" style={{ opacity: 0.8 }}>
-            This could mean:
+          <p className="label" style={{ marginBottom: 0 }}>
+            No {type} tariff data available.
           </p>
-          <ul
-            style={{
-              fontSize: "11px",
-              textAlign: "left",
-              marginTop: 4,
-              opacity: 0.8,
-            }}
-          >
-            <li>No active tariff schedules for this trade direction</li>
-            <li>Country not in our current database coverage</li>
-            <li>Data is being updated</li>
-          </ul>
         </motion.div>
       );
+    }
     return (
       <div style={{ display: "grid", gap: 12 }}>
         {items.map((item, index) => (
@@ -219,7 +239,7 @@ export default function InsightsPage() {
                     <div
                       style={{ fontWeight: 600, color: "var(--color-text)" }}
                     >
-                      {formatPercent(item.baseRate)}
+                      {formatStoredPercent(item.baseRate, "N/A")}
                     </div>
                   </div>
                   <div>
@@ -244,89 +264,135 @@ export default function InsightsPage() {
     );
   };
 
-  const renderPartnerList = (items = []) => {
-    if (!items.length)
-      return (
-        <motion.div
-          className="small"
-          style={{
-            marginTop: 8,
-            padding: 16,
-            textAlign: "center",
-            opacity: 0.7,
-            background: "rgba(255,255,255,0.05)",
-            borderRadius: 8,
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.7 }}
-        >
-          <p style={{ marginBottom: 8 }}>No trading partner data available.</p>
-          <p className="tiny" style={{ opacity: 0.8 }}>
-            This typically indicates:
-          </p>
-          <ul
-            style={{
-              fontSize: "11px",
-              textAlign: "left",
-              marginTop: 4,
-              opacity: 0.8,
-            }}
-          >
-            <li>Limited bilateral trade agreements</li>
-            <li>Country operates under multilateral frameworks only</li>
-            <li>Data collection in progress</li>
-          </ul>
-        </motion.div>
-      );
+  const renderPartnerSection = (
+    partners = [],
+    title,
+    expandedSet,
+    toggleFn
+  ) => {
     return (
-      <div style={{ display: "grid", gap: 12 }}>
-        {items.map((item, index) => (
+      <section style={{ marginTop: 24 }}>
+        <h4
+          className="label"
+          style={{ marginBottom: 12, fontSize: "14px", fontWeight: 600 }}
+        >
+          {title}
+        </h4>
+        {!partners.length ? (
           <motion.div
-            key={item.code}
-            className="metric-card"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
+            className="small"
+            style={{
+              marginTop: 8,
+              padding: 16,
+              textAlign: "center",
+              opacity: 0.7,
+              background: "rgba(255,255,255,0.05)",
+              borderRadius: 8,
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.7 }}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <div>
-                <span
-                  style={{
-                    fontSize: "16px",
-                    fontWeight: 600,
-                    color: "var(--color-text)",
-                  }}
-                >
-                  {item.name}
-                </span>
-                <span
-                  className="badge subtle"
-                  style={{ marginLeft: 8, fontSize: "12px" }}
-                >
-                  {item.code}
-                </span>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div
-                  className="label"
-                  style={{ fontSize: "12px", opacity: 0.7 }}
-                >
-                  Avg Tariff Rate
-                </div>
-                <span style={{ fontSize: "14px", fontWeight: 600 }}>
-                  {formatPercent(item.totalValue)}
-                </span>
-              </div>
-            </div>
           </motion.div>
-        ))}
-      </div>
+        ) : (
+          <div style={{ display: "grid", gap: 12 }}>
+            {partners.map((partner, index) => {
+              const isExpanded = expandedSet.has(partner.code);
+              return (
+                <motion.div
+                  key={partner.code}
+                  className="metric-card"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          fontSize: "16px",
+                          fontWeight: 600,
+                          color: "var(--color-text)",
+                        }}
+                      >
+                        {partner.name}
+                      </div>
+                      <div className="tiny badge subtle">{partner.code}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div
+                        className="label"
+                        style={{ fontSize: "12px", opacity: 0.7 }}
+                      >
+                        Items
+                      </div>
+                      <div style={{ fontWeight: 600 }}>{partner.itemCount}</div>
+                      <button
+                        type="button"
+                        className="btn-small"
+                        onClick={() => toggleFn(partner.code)}
+                        aria-expanded={isExpanded}
+                        style={{ marginTop: 8 }}
+                      >
+                        {isExpanded ? "Hide items" : "View items"}
+                      </button>
+                    </div>
+                  </div>
+                  {isExpanded && (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        paddingTop: 12,
+                        borderTop: "1px solid rgba(255,255,255,0.08)",
+                        display: "grid",
+                        gap: 8,
+                      }}
+                    >
+                      {(partner.items || []).map((item) => (
+                        <div
+                          key={`${partner.code}-${item.categoryCode}`}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            gap: 12,
+                            fontSize: "13px",
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600 }}>
+                              {item.categoryName}
+                            </div>
+                            <div className="tiny badge subtle">
+                              {item.categoryCode}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div>{formatStoredPercent(item.baseRate, "-")}</div>
+                            <div className="tiny" style={{ opacity: 0.8 }}>
+                              Fee: {formatCurrency(item.additionalFee)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {!partner.items?.length && (
+                        <div className="tiny" style={{ opacity: 0.7 }}>
+                          No item-level detail available.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     );
   };
 
@@ -367,7 +433,7 @@ export default function InsightsPage() {
                 id="countrySelect"
                 value={country}
                 onChange={setCountry}
-                options={COUNTRIES}
+                options={countryOptions}
               />
             </div>
           </div>
@@ -377,7 +443,7 @@ export default function InsightsPage() {
               className="primary"
               disabled={loading || !country}
             >
-              {loading ? "Searching…" : "Search"}
+              {loading ? "Searching..." : "Search"}
             </button>
             <button type="button" onClick={handleClear} disabled={loading}>
               Clear
@@ -609,7 +675,7 @@ export default function InsightsPage() {
                       color: "var(--color-text)",
                     }}
                   >
-                    {formatPercent(insights.averageImportTariff)}
+                    {formatStoredPercent(insights.averageImportTariff, "N/A")}
                   </span>
                   <p className="tiny" style={{ marginTop: 4, opacity: 0.7 }}>
                     Mean base rate across tariff schedules applied to inbound
@@ -630,7 +696,7 @@ export default function InsightsPage() {
                       color: "var(--color-text)",
                     }}
                   >
-                    {formatPercent(insights.averageExportTariff)}
+                    {formatStoredPercent(insights.averageExportTariff, "N/A")}
                   </span>
                   <p className="tiny" style={{ marginTop: 4, opacity: 0.7 }}>
                     Mean base rate negotiated on export corridors from the
@@ -652,9 +718,20 @@ export default function InsightsPage() {
                 className="label"
                 style={{ marginBottom: 12, fontSize: "14px", fontWeight: 600 }}
               >
-                Major Trade Partners by Average Tariff Rate
+                Major Trading Partners
               </h4>
-              {renderPartnerList(insights.majorPartners)}
+              {renderPartnerSection(
+                insights?.majorImportPartners || [],
+                "Inbound (Imports)",
+                expandedImportPartners,
+                toggleImportPartner
+              )}
+              {renderPartnerSection(
+                insights?.majorExportPartners || [],
+                "Outbound (Exports)",
+                expandedExportPartners,
+                toggleExportPartner
+              )}
             </motion.section>
           </motion.div>
         )}
@@ -668,3 +745,6 @@ export default function InsightsPage() {
     </MotionWrapper>
   );
 }
+
+
+

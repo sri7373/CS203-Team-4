@@ -31,7 +31,16 @@ const normalizeCategory = (item) => {
   }
   const value = raw.toUpperCase();
   const label = item.name ?? item.label ?? value;
-  return { value, label };
+  const hsCodeRaw = item.hsCode ?? item.hs_code ?? value;
+  const hsCode = hsCodeRaw ? hsCodeRaw.toString().toUpperCase() : value;
+  const weightRaw =
+    item.weightBased !== undefined
+      ? item.weightBased
+      : item.weight_based !== undefined
+      ? item.weight_based
+      : false;
+  const weightBased = Boolean(weightRaw);
+  return { value, label, hsCode, weightBased };
 };
 
 const dedupeByValue = (options) => {
@@ -59,13 +68,13 @@ export function useReferenceOptions() {
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    async function load(forceRefresh = false) {
       setLoading(true);
       setError(null);
       try {
         const [countriesResponse, categoriesResponse] = await Promise.all([
-          fetchCountries(),
-          fetchProductCategories(),
+          fetchCountries(forceRefresh),
+          fetchProductCategories(forceRefresh),
         ]);
 
         if (cancelled) return;
@@ -95,10 +104,17 @@ export function useReferenceOptions() {
       }
     }
 
-    load();
+    // Initial load
+    load(false);
+
+    // Refresh data every 5 minutes to stay in sync with database
+    const refreshInterval = setInterval(() => {
+      load(true);
+    }, 5 * 60 * 1000);
 
     return () => {
       cancelled = true;
+      clearInterval(refreshInterval);
     };
   }, []);
 

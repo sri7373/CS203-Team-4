@@ -9,18 +9,19 @@ import { AnimatePresence, motion } from "framer-motion";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import Select from "../components/Select.jsx";
 import {
-  COUNTRY_CODES,
-  PRODUCT_CATEGORIES,
+  COUNTRY_CODES as FALLBACK_COUNTRIES,
+  PRODUCT_CATEGORIES as FALLBACK_CATEGORIES,
   DEFAULT_DESTINATION_CODE,
   DEFAULT_ORIGIN_CODE,
   DEFAULT_PRODUCT_CATEGORY,
-  PRODUCT_CATEGORY_CODES,
 } from "../constants/referenceOptions.js";
 import api from "../services/api.js";
 import {
   fetchCountries,
   fetchProductCategories,
 } from "../services/reference.js";
+import { formatStoredPercent } from "../utils/percent.js";
+import { logout } from "../services/auth.js";
 
 const toOptionValue = (option) =>
   typeof option === "string" ? option : option?.value || "";
@@ -61,14 +62,25 @@ export default function AdminTariffsPage() {
   const [countries, setCountries] = useState([]);
   const [categories, setCategories] = useState([]);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { tariff, show }
+  const [countryForm, setCountryForm] = useState({ code: "", name: "" });
+  const [categoryForm, setCategoryForm] = useState({
+    code: "",
+    name: "",
+    hsCode: "",
+    weightBased: false,
+  });
+  const [countrySaving, setCountrySaving] = useState(false);
+  const [categorySaving, setCategorySaving] = useState(false);
+  const [countryModalOpen, setCountryModalOpen] = useState(false);
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const feedbackTimeoutRef = useRef(null);
 
-  const loadReferenceData = useCallback(async () => {
+  const loadReferenceData = useCallback(async (forceRefresh = false) => {
     setRefLoading(true);
     try {
       const [countryData, categoryData] = await Promise.all([
-        fetchCountries(),
-        fetchProductCategories(),
+        fetchCountries(forceRefresh),
+        fetchProductCategories(forceRefresh),
       ]);
       const allowedCountries = countryData
         .map((item) => {
@@ -77,7 +89,7 @@ export default function AdminTariffsPage() {
           const name = item.name ? item.name.trim() : "";
           return {
             value: code,
-            label: name ? `${code} — ${name}` : code,
+            label: name ? `${code} - ${name}` : code,
             name: name || code,
           };
         })
@@ -87,10 +99,22 @@ export default function AdminTariffsPage() {
           const code = (item.code || "").toUpperCase();
           if (!code) return null;
           const name = item.name ? item.name.trim() : "";
+          const hsCodeRaw =
+            item.hsCode ?? item.hs_code ?? code;
+          const hsCode =
+            typeof hsCodeRaw === "string"
+              ? hsCodeRaw.toUpperCase()
+              : String(hsCodeRaw || "").toUpperCase();
+          const weightRaw =
+            item.weightBased ??
+            item.weight_based ??
+            false;
           return {
             value: code,
-            label: name ? `${code} — ${name}` : code,
+            label: name ? `${code} - ${name}` : code,
             name: name || code,
+            hsCode,
+            weightBased: Boolean(weightRaw),
           };
         })
         .filter(Boolean);
@@ -117,16 +141,27 @@ export default function AdminTariffsPage() {
       setReferenceError(null);
     } catch (err) {
       console.error("Failed to load reference data", err);
-      const fallbackCountries = COUNTRY_CODES.map((country) => ({
+      const fallbackCountries = FALLBACK_COUNTRIES.map((country) => ({
         value: country.value ?? country.code,
         label: country.label ?? country.name ?? country.value ?? country.code,
         name: country.name ?? country.label ?? country.value ?? country.code,
       }));
-      const fallbackCategories = PRODUCT_CATEGORIES.map((category) => ({
-        value: category.value ?? category,
-        label: category.label ?? category.value ?? category,
-        name: category.label ?? category.value ?? category,
-      }));
+      const fallbackCategories = FALLBACK_CATEGORIES.map((category) => {
+        const rawValue = category.value ?? category.code ?? category;
+        const value = rawValue ? String(rawValue).toUpperCase() : "";
+        const labelSource = category.label ?? category.name ?? value;
+        const hsSource =
+          category.hsCode ?? category.hs_code ?? category.value ?? value;
+        return {
+          value,
+          label: labelSource,
+          name: labelSource,
+          hsCode: hsSource ? String(hsSource).toUpperCase() : "",
+          weightBased: Boolean(
+            category.weightBased ?? category.weight_based ?? false
+          ),
+        };
+      });
       setCountries(fallbackCountries);
       setCategories(fallbackCategories);
       setForm((prev) => ({
@@ -156,7 +191,17 @@ export default function AdminTariffsPage() {
   }, []);
 
   useEffect(() => {
-    loadReferenceData();
+    // Initial load
+    loadReferenceData(false);
+
+    // Refresh reference data every 5 minutes to stay in sync with database
+    const refreshInterval = setInterval(() => {
+      loadReferenceData(true);
+    }, 5 * 60 * 1000);
+
+    return () => {
+      clearInterval(refreshInterval);
+    };
   }, [loadReferenceData]);
 
   const loadTariffs = useCallback(async () => {
@@ -200,6 +245,8 @@ export default function AdminTariffsPage() {
         t.originCountryCode,
         t.destinationCountryCode,
         t.productCategoryCode,
+        t.hsCode,
+        t.weightValue,
       ]
         .filter(Boolean)
         .map(String)
@@ -270,6 +317,52 @@ export default function AdminTariffsPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const formatWeightDisplay = (tariff) => {
+    if (!tariff) return "-";
+    const numeric = Number(tariff.weightValue);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      const formatted =
+        Number.isInteger(numeric) ? numeric.toFixed(0) : numeric.toFixed(2);
+      return `${formatted} kg`;
+    }
+    if (tariff.weightBased) {
+      return "Required";
+    }
+    return "N/A";
+  };
+
+  const countryOptionsWithAction = useMemo(
+    () => [
+      ...countries,
+      { value: "__add_country__", label: "Add Country..." },
+    ],
+    [countries]
+  );
+
+  const categoryOptionsWithAction = useMemo(
+    () => [
+      ...categories,
+      { value: "__add_category__", label: "Add Category..." },
+    ],
+    [categories]
+  );
+
+  const handleCountrySelect = (key) => (value) => {
+    if (value === "__add_country__") {
+      setCountryModalOpen(true);
+      return;
+    }
+    handleSelectChange(key)(value);
+  };
+
+  const handleCategorySelect = (value) => {
+    if (value === "__add_category__") {
+      setCategoryModalOpen(true);
+      return;
+    }
+    handleSelectChange("productCategoryCode")(value);
+  };
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -277,6 +370,84 @@ export default function AdminTariffsPage() {
 
   const ensureReferenceValue = (value, options) =>
     listOptionValues(options).includes(value);
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/login";
+  };
+
+  const handleCountryFormChange = (event) => {
+    const { name, value } = event.target;
+    setCountryForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCategoryFormChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    setCategoryForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const submitCountry = async (event) => {
+    event.preventDefault();
+    const code = countryForm.code.trim().toUpperCase();
+    const name = countryForm.name.trim();
+    if (!code || !name) {
+      showFeedback("Country code and name are required.", "error");
+      return;
+    }
+    setCountrySaving(true);
+    try {
+      await api.post("/reference/countries", { code, name });
+      showFeedback(`Country ${code} added.`, "success");
+      setCountryForm({ code: "", name: "" });
+      setCountryModalOpen(false);
+      await loadReferenceData(true);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.formattedMessage ||
+        err?.message ||
+        "Failed to add country";
+      showFeedback(msg, "error");
+    } finally {
+      setCountrySaving(false);
+    }
+  };
+
+  const submitCategory = async (event) => {
+    event.preventDefault();
+    const code = categoryForm.code.trim().toUpperCase();
+    const name = categoryForm.name.trim();
+    const hsCode = categoryForm.hsCode.trim().toUpperCase();
+    if (!code || !name || !hsCode) {
+      showFeedback("Category code, name and HS code are required.", "error");
+      return;
+    }
+    setCategorySaving(true);
+    try {
+      await api.post("/reference/product-categories", {
+        code,
+        name,
+        hsCode,
+        weightBased: categoryForm.weightBased,
+      });
+      showFeedback(`Category ${code} added.`, "success");
+      setCategoryForm({ code: "", name: "", hsCode: "", weightBased: false });
+      setCategoryModalOpen(false);
+      await loadReferenceData(true);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.formattedMessage ||
+        err?.message ||
+        "Failed to add category";
+      showFeedback(msg, "error");
+    } finally {
+      setCategorySaving(false);
+    }
+  };
 
   const buildPayload = () => ({
     originCountryCode: form.originCountryCode?.trim().toUpperCase(),
@@ -432,8 +603,8 @@ export default function AdminTariffsPage() {
               <Select
                 id="originCountryCode"
                 value={form.originCountryCode}
-                onChange={handleSelectChange("originCountryCode")}
-                options={countries}
+                onChange={handleCountrySelect("originCountryCode")}
+                options={countryOptionsWithAction}
                 disabled={refLoading || !countries.length}
                 placeholder={refLoading ? "Loading…" : "(Select)"}
               />
@@ -445,8 +616,8 @@ export default function AdminTariffsPage() {
               <Select
                 id="destinationCountryCode"
                 value={form.destinationCountryCode}
-                onChange={handleSelectChange("destinationCountryCode")}
-                options={countries}
+                onChange={handleCountrySelect("destinationCountryCode")}
+                options={countryOptionsWithAction}
                 disabled={refLoading || !countries.length}
                 placeholder={refLoading ? "Loading…" : "(Select)"}
               />
@@ -456,8 +627,8 @@ export default function AdminTariffsPage() {
               <Select
                 id="productCategoryCode"
                 value={form.productCategoryCode}
-                onChange={handleSelectChange("productCategoryCode")}
-                options={categories}
+                onChange={handleCategorySelect}
+                options={categoryOptionsWithAction}
                 disabled={refLoading || !categories.length}
                 placeholder={refLoading ? "Loading…" : "(Select)"}
               />
@@ -466,7 +637,7 @@ export default function AdminTariffsPage() {
 
           <div className="inline-fields field-cluster">
             <div className="field" style={{ flex: "1 1 200px" }}>
-              <label htmlFor="baseRate">Base Rate (decimal)</label>
+              <label htmlFor="baseRate">Base Rate (%)</label>
               <input
                 id="baseRate"
                 className="input"
@@ -477,7 +648,7 @@ export default function AdminTariffsPage() {
                 value={form.baseRate}
                 onChange={handleChange}
                 required
-                placeholder="e.g. 0.05"
+                placeholder="e.g. 5 for 5%"
               />
             </div>
             <div className="field" style={{ flex: "1 1 200px" }}>
@@ -543,6 +714,14 @@ export default function AdminTariffsPage() {
             </button>
             <button type="button" onClick={resetForm} disabled={saving}>
               {editing ? "Cancel Edit" : "Clear"}
+            </button>
+            <button 
+              type="button" 
+              onClick={() => loadReferenceData(true)} 
+              disabled={refLoading}
+              title="Refresh country and category options from database"
+            >
+              {refLoading ? "Refreshing…" : "Refresh"}
             </button>
           </div>
 
@@ -773,7 +952,9 @@ export default function AdminTariffsPage() {
                   <th>Origin</th>
                   <th>Destination</th>
                   <th>Category</th>
-                  <th>Base Rate</th>
+                  <th>HS Code</th>
+                  <th>Weight</th>
+                  <th>Base Rate (%)</th>
                   <th>Additional Fee</th>
                   <th>Effective From</th>
                   <th>Effective To</th>
@@ -818,7 +999,13 @@ export default function AdminTariffsPage() {
                       <td>{tariff.originCountryCode}</td>
                       <td>{tariff.destinationCountryCode}</td>
                       <td>{tariff.productCategoryCode}</td>
-                      <td>{tariff.baseRate}</td>
+                      <td>{tariff.hsCode || "-"}</td>
+                      <td>{formatWeightDisplay(tariff)}</td>
+                      <td>
+                        {tariff.baseRate != null
+                          ? formatStoredPercent(tariff.baseRate, "-", 4)
+                          : "-"}
+                      </td>
                       <td>{tariff.additionalFee}</td>
                       <td>{tariff.effectiveFrom}</td>
                       <td>{tariff.effectiveTo || "-"}</td>
@@ -826,6 +1013,7 @@ export default function AdminTariffsPage() {
                         <div className="btn-group">
                           <button
                             type="button"
+                            className="btn-small"
                             onClick={() => beginEdit(tariff)}
                             disabled={saving}
                           >
@@ -833,7 +1021,7 @@ export default function AdminTariffsPage() {
                           </button>
                           <button
                             type="button"
-                            className="danger"
+                            className="btn-small danger"
                             onClick={() => handleDelete(tariff)}
                             disabled={deletingId === tariff.id || saving}
                           >
@@ -894,6 +1082,173 @@ export default function AdminTariffsPage() {
           </motion.div>
         )}
       </div>
+
+      {countryModalOpen && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(5, 8, 20, 0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 999,
+            padding: 24,
+          }}
+        >
+          <div
+            className="card glass glow-border"
+            style={{ maxWidth: 420, width: "100%", padding: 24 }}
+          >
+            <h3 className="neon-text" style={{ marginBottom: 16 }}>
+              Add Country
+            </h3>
+            <form onSubmit={submitCountry}>
+              <div className="field">
+                <label htmlFor="modalCountryCode">Country Code</label>
+                <input
+                  id="modalCountryCode"
+                  name="code"
+                  className="input"
+                  value={countryForm.code}
+                  onChange={handleCountryFormChange}
+                  placeholder="e.g. FRA"
+                  maxLength={3}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="modalCountryName">Country Name</label>
+                <input
+                  id="modalCountryName"
+                  name="name"
+                  className="input"
+                  value={countryForm.name}
+                  onChange={handleCountryFormChange}
+                  placeholder="France"
+                />
+              </div>
+              <div className="btn-group" style={{ marginTop: 16 }}>
+                <button
+                  type="submit"
+                  className="btn-small"
+                  disabled={countrySaving}
+                >
+                  {countrySaving ? "Saving…" : "Save Country"}
+                </button>
+                <button
+                  type="button"
+                  className="btn-small"
+                  onClick={() => {
+                    setCountryModalOpen(false);
+                    setCountryForm({ code: "", name: "" });
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {categoryModalOpen && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(5, 8, 20, 0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 999,
+            padding: 24,
+          }}
+        >
+          <div
+            className="card glass glow-border"
+            style={{ maxWidth: 460, width: "100%", padding: 24 }}
+          >
+            <h3 className="neon-text" style={{ marginBottom: 16 }}>
+              Add Product Category
+            </h3>
+            <form onSubmit={submitCategory}>
+              <div className="field">
+                <label htmlFor="modalCategoryCode">Category Code</label>
+                <input
+                  id="modalCategoryCode"
+                  name="code"
+                  className="input"
+                  value={categoryForm.code}
+                  onChange={handleCategoryFormChange}
+                  placeholder="e.g. FOOD"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="modalCategoryName">Category Name</label>
+                <input
+                  id="modalCategoryName"
+                  name="name"
+                  className="input"
+                  value={categoryForm.name}
+                  onChange={handleCategoryFormChange}
+                  placeholder="Food & Beverages"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="modalHsCode">HS Code</label>
+                <input
+                  id="modalHsCode"
+                  name="hsCode"
+                  className="input"
+                  value={categoryForm.hsCode}
+                  onChange={handleCategoryFormChange}
+                  placeholder="210690"
+                />
+              </div>
+              <div className="field checkbox-field">
+                <label htmlFor="modalWeightBased">Weight Based</label>
+                <input
+                  id="modalWeightBased"
+                  name="weightBased"
+                  type="checkbox"
+                  checked={categoryForm.weightBased}
+                  onChange={handleCategoryFormChange}
+                />
+              </div>
+              <div className="btn-group" style={{ marginTop: 16 }}>
+                <button
+                  type="submit"
+                  className="btn-small"
+                  disabled={categorySaving}
+                >
+                  {categorySaving ? "Saving…" : "Save Category"}
+                </button>
+                <button
+                  type="button"
+                  className="btn-small"
+                  onClick={() => {
+                    setCategoryModalOpen(false);
+                    setCategoryForm({
+                      code: "",
+                      name: "",
+                      hsCode: "",
+                      weightBased: false,
+                    });
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </MotionWrapper>
   );
 }

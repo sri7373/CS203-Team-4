@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
-import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api")
@@ -51,33 +50,18 @@ public class CalculateTariffController {
         ProductCategory cat = productCategoryRepository.findByCode(req.getProductCode().toUpperCase())
                 .orElseThrow(() -> new InvalidTariffRequestException("Unknown product code: " + req.getProductCode()));
 
-        double usedWeight = 0.0;
-        double declared = req.getDeclaredValue();
-
-        if (cat.getWeightBased()) {
-            // weight must be provided in request
-            if (req.getWeight() == null || req.getWeight() <= 0 ||
-                Double.isNaN(req.getWeight()) || Double.isInfinite(req.getWeight()) ||
-                req.getWeight() > 10000) {
-                throw new InvalidTariffRequestException("Weight must be a positive, finite number less than or equal to 10,000 kg for weight-based products");
-            }
-            usedWeight = req.getWeight();
-            // multiply declared value by weight as per Option A
-            BigDecimal adjusted = BigDecimal.valueOf(declared).multiply(BigDecimal.valueOf(usedWeight));
-            declared = adjusted.doubleValue();
-            log.debug("Adjusted declared value by weight: {} -> {}", req.getDeclaredValue(), declared);
-        } else {
-            // non-weight-based: ignore weight
-            usedWeight = req.getWeight() == null ? 0.0 : req.getWeight();
-        }
+        double usedWeight = req.getWeight() == null ? 0.0 : req.getWeight();
 
         // Prepare service request
         TariffCalcRequest svcReq = new TariffCalcRequest();
         svcReq.originCountryCode = req.getOriginCountry();
         svcReq.destinationCountryCode = req.getDestCountry();
         svcReq.productCategoryCode = req.getProductCode();
-        svcReq.declaredValue = declared;
-        svcReq.date = null; // use default (today)
+        svcReq.hsCode = cat.getHsCode() != null ? cat.getHsCode() : cat.getCode();
+        svcReq.weight = req.getWeight();
+        svcReq.declaredValue = req.getDeclaredValue();
+        svcReq.effectiveFrom = null;
+        svcReq.effectiveTo = null;
 
         // Delegate to existing TariffService which preserves calculation formulas
         TariffCalcResponse svcResp = tariffService.calculate(svcReq, false);

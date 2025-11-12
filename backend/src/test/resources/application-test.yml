@@ -1,35 +1,45 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb;MODE=PostgreSQL
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: 
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/tariff_test}
+    username: ${DB_USERNAME:test_user}
+    password: ${DB_PASSWORD:test_password}
+    driver-class-name: org.postgresql.Driver
+  
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: create  # Create schema at startup
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
-    defer-datasource-initialization: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
+    open-in-view: false
+    defer-datasource-initialization: true  # Wait for Hibernate to create schema first
+  
   sql:
     init:
-      mode: never
+      mode: always
+      data-locations: classpath:test-data.sql
+      continue-on-error: false
 
 app:
   jwt:
-    # WARNING: This JWT secret is for TESTING ONLY. Never use this value or a similar value in production environments.
-    secret: fvbMVJWfii+dPc5Ih2W6s9IC7C+fIdZgC2B/VVnEjBM=
-    expirationMs: 86400000
+    secret: ${JWT_SECRET:test-secret-key}
+    expirationMs: ${JWT_EXPIRATION_MS:86400000}
 
 gemini:
   api:
-  # Use environment variable for API keys in tests to avoid committing secrets.
-  # Set GEMINI_API_KEY in the test environment or CI secrets. Provide an empty default
-  # to avoid failing tests when the variable is not present locally.
-  key: ${GEMINI_API_KEY:}
+    key: ${GEMINI_API_KEY:test-gemini-key}
+
+newsdata:
+  api:
+    key: ${NEWSDATA_API_KEY:test-newsdata-key}
 
 logging:
   level:
-    root: INFO
-    com.smu.tariff: DEBUG
+    org.hibernate.SQL: WARN
+    org.springframework: WARN
+    org.springframework.security: WARN

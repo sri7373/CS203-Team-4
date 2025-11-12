@@ -217,8 +217,12 @@ public class QueryLogController {
         dto.setOrigin(origin);
         dto.setDestination(destination);
         dto.setCategory(parsed.getOrDefault("category", parsed.getOrDefault("cat", "-")));
-        dto.setValue(parsed.getOrDefault("value", parsed.getOrDefault("val", "-")));
-        dto.setDate(parsed.getOrDefault("date", "-"));
+        dto.setValue(parsed.getOrDefault("value", parsed.getOrDefault("val", parsed.getOrDefault("declared", "-"))));
+        dto.setDate(parsed.getOrDefault("date", parsed.getOrDefault("effective", "-")));
+        dto.setHsCode(parsed.getOrDefault("hscode", parsed.getOrDefault("hs", "-")));
+        dto.setRequestedEffectiveFrom(parsed.getOrDefault("requestedfrom", "-"));
+        dto.setRequestedEffectiveTo(parsed.getOrDefault("requestedto", "-"));
+        dto.setWeight(parsed.getOrDefault("weight", "-"));
 
         Map<String, Object> map = new HashMap<>();
         map.put("id", dto.getId());
@@ -240,6 +244,10 @@ public class QueryLogController {
         map.put("category", dto.getCategory());
         map.put("value", dto.getValue());
         map.put("date", dto.getDate());
+        map.put("hsCode", dto.getHsCode());
+        map.put("requestedEffectiveFrom", dto.getRequestedEffectiveFrom());
+        map.put("requestedEffectiveTo", dto.getRequestedEffectiveTo());
+        map.put("weight", dto.getWeight());
 
         return map;
     }
@@ -255,4 +263,3 @@ public class QueryLogController {
         return trimmed.substring(0, 117) + "...";
     }
 }
-

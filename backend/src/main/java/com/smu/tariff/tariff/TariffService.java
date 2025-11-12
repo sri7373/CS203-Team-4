@@ -76,29 +76,54 @@ public class TariffService {
         if (req.destinationCountryCode == null || req.destinationCountryCode.trim().isEmpty()) {
             throw new InvalidTariffRequestException("Destination country code is required");
         }
-        if (req.productCategoryCode == null || req.productCategoryCode.trim().isEmpty()) {
-            throw new InvalidTariffRequestException("Product category code is required");
+        if (req.hsCode == null || req.hsCode.trim().isEmpty()) {
+            throw new InvalidTariffRequestException("HS code is required");
         }
-        if (req.declaredValue <= 0) {
+        if (req.declaredValue == null || req.declaredValue <= 0) {
             throw new InvalidTariffRequestException("Declared value must be greater than 0");
         }
 
-        LocalDate date = (req.date == null || req.date.isBlank()) ? LocalDate.now() : LocalDate.parse(req.date);
+        LocalDate requestedFrom = parseIsoDate(req.effectiveFrom);
+        LocalDate requestedTo = parseIsoDate(req.effectiveTo);
+        if (requestedFrom != null && requestedTo != null && requestedFrom.isAfter(requestedTo)) {
+            throw new InvalidTariffRequestException("effectiveFrom cannot be later than effectiveTo");
+        }
 
         Country origin = countryRepository.findByCode(req.originCountryCode.toUpperCase())
                 .orElseThrow(() -> new InvalidTariffRequestException("Unknown origin country code: " + req.originCountryCode));
         Country dest = countryRepository.findByCode(req.destinationCountryCode.toUpperCase())
                 .orElseThrow(() -> new InvalidTariffRequestException("Unknown destination country code: " + req.destinationCountryCode));
-        ProductCategory cat = productCategoryRepository.findByCode(req.productCategoryCode.toUpperCase())
-                .orElseThrow(() -> new InvalidTariffRequestException("Unknown product category code: " + req.productCategoryCode));
 
-        List<TariffRate> rates = tariffRateRepository.findApplicableRates(origin, dest, cat, date);
+        ProductCategory cat = resolveCategory(req.productCategoryCode, req.hsCode);
+        boolean weightBased = cat.getWeightBased();
+
+        BigDecimal weightQuantity = null;
+        if (weightBased) {
+            if (req.weight == null || req.weight <= 0 || Double.isNaN(req.weight) || Double.isInfinite(req.weight)) {
+                throw new InvalidTariffRequestException("Weight must be provided for weight-based products and must be positive");
+            }
+            if (req.weight > 10000) {
+                throw new InvalidTariffRequestException("Weight cannot exceed 10,000 kg");
+            }
+            weightQuantity = BigDecimal.valueOf(req.weight);
+        } else if (req.weight != null && req.weight < 0) {
+            throw new InvalidTariffRequestException("Weight cannot be negative");
+        } else if (req.weight != null && req.weight > 0) {
+            weightQuantity = BigDecimal.valueOf(req.weight);
+        }
+
+        LocalDate evaluationDate = requestedFrom != null
+                ? requestedFrom
+                : (requestedTo != null ? requestedTo : LocalDate.now());
+
+        List<TariffRate> rates = tariffRateRepository.findApplicableRates(origin, dest, cat, evaluationDate);
         if (rates.isEmpty()) {
             throw new TariffNotFoundException(
-                String.format("No applicable tariff rate found for route %s -> %s, category %s on %s",
-                    req.originCountryCode, req.destinationCountryCode, req.productCategoryCode, date));
+                    String.format("No applicable tariff rate found for route %s -> %s, HS %s on %s",
+                            req.originCountryCode, req.destinationCountryCode, req.hsCode, evaluationDate));
         }
-        TariffRate rate = rates.get(0);
+
+        TariffRate rate = selectRateForWindow(rates, requestedFrom, requestedTo);
 
         if ((rate.getBaseRate() == null || rate.getBaseRate().compareTo(BigDecimal.ZERO) == 0)
                 && (rate.getAdditionalFee() == null || rate.getAdditionalFee().compareTo(BigDecimal.ZERO) == 0)) {
@@ -110,8 +135,16 @@ public class TariffService {
                     });
         }
 
-        BigDecimal declared = BigDecimal.valueOf(req.declaredValue);
-        BigDecimal baseRate = rate.getBaseRate() != null ? rate.getBaseRate() : BigDecimal.ZERO;
+        BigDecimal declaredPerUnit = BigDecimal.valueOf(req.declaredValue).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal declared = declaredPerUnit;
+        if (weightBased && weightQuantity != null) {
+            declared = declaredPerUnit.multiply(weightQuantity).setScale(2, RoundingMode.HALF_UP);
+        }
+
+        BigDecimal baseRate = BaseRateUtils.fromStoredPercentage(rate.getBaseRate());
+        if (baseRate == null) {
+            baseRate = BigDecimal.ZERO;
+        }
         BigDecimal additionalFee = rate.getAdditionalFee() != null ? rate.getAdditionalFee() : BigDecimal.ZERO;
 
         BigDecimal tariffAmount = declared.multiply(baseRate).setScale(2, RoundingMode.HALF_UP);
@@ -120,24 +153,38 @@ public class TariffService {
         TariffCalcResponse resp = new TariffCalcResponse();
         resp.originCountryCode = origin.getCode();
         resp.destinationCountryCode = dest.getCode();
+        resp.hsCode = cat.getHsCode();
         resp.productCategoryCode = cat.getCode();
-        resp.effectiveDate = date.toString();
+        resp.productCategoryName = cat.getName();
+        resp.weightBased = weightBased;
+        resp.weight = weightQuantity != null ? weightQuantity.doubleValue() : null;
+        resp.rateEffectiveFrom = rate.getEffectiveFrom() != null ? rate.getEffectiveFrom().toString() : null;
+        resp.rateEffectiveTo = rate.getEffectiveTo() != null ? rate.getEffectiveTo().toString() : null;
+        resp.requestedEffectiveFrom = requestedFrom != null ? requestedFrom.toString() : null;
+        resp.requestedEffectiveTo = requestedTo != null ? requestedTo.toString() : null;
+        resp.effectiveDate = evaluationDate.toString();
+        resp.declaredValuePerUnit = declaredPerUnit;
         resp.declaredValue = declared;
-        resp.baseRate = baseRate;
+        resp.baseRate = BaseRateUtils.toStoredPercentage(baseRate);
         resp.tariffAmount = tariffAmount;
         resp.additionalFee = additionalFee;
         resp.totalCost = total;
-        resp.notes = "Total = declaredValue + (declaredValue * baseRate) + additionalFee";
+        resp.notes = weightBased
+                ? "Total = (declaredValuePerUnit * weight) + (weightedValue * (baseRate / 100)) + additionalFee"
+                : "Total = declaredValue + (declaredValue * (baseRate / 100)) + additionalFee";
         resp.aiSummary = null; // to be filled later
 
         queryLogService.log(
             "CALCULATE",
-            String.format("{origin:%s,dest:%s,cat:%s,val:%s,date:%s}",
+            String.format("{origin:%s,destination:%s,hs:%s,category:%s,declared:%s,weight:%s,requestedFrom:%s,requestedTo:%s}",
                     resp.originCountryCode,
                     resp.destinationCountryCode,
-                    resp.productCategoryCode,
-                    declared,
-                    date),
+                    req.hsCode,
+                    cat.getCode(),
+                    declaredPerUnit,
+                    weightQuantity != null ? weightQuantity : "-",
+                    resp.requestedEffectiveFrom == null ? "-" : resp.requestedEffectiveFrom,
+                    resp.requestedEffectiveTo == null ? "-" : resp.requestedEffectiveTo),
             resp,
             resp.originCountryCode,
             resp.destinationCountryCode
@@ -158,6 +205,61 @@ public class TariffService {
         }
 
         return resp;
+    }
+
+    private ProductCategory resolveCategory(String categoryCode, String hsCode) {
+        ProductCategory fromCode = null;
+        if (categoryCode != null && !categoryCode.trim().isEmpty()) {
+            fromCode = productCategoryRepository.findByCode(categoryCode.trim().toUpperCase())
+                    .orElseThrow(() -> new InvalidTariffRequestException("Unknown product category code: " + categoryCode));
+        }
+
+        ProductCategory fromHs = productCategoryRepository.findByHsCodeIgnoreCase(hsCode.trim())
+                .orElse(null);
+
+        if (fromCode != null && fromHs != null && !fromCode.getId().equals(fromHs.getId())) {
+            throw new InvalidTariffRequestException("HS code " + hsCode + " does not match product category " + categoryCode);
+        }
+
+        if (fromCode != null) {
+            return fromCode;
+        }
+        if (fromHs != null) {
+            return fromHs;
+        }
+        throw new InvalidTariffRequestException("Unknown HS code: " + hsCode);
+    }
+
+    private LocalDate parseIsoDate(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(raw.trim());
+        } catch (Exception ex) {
+            throw new InvalidTariffRequestException("Invalid date format (expected yyyy-MM-dd): " + raw);
+        }
+    }
+
+    private TariffRate selectRateForWindow(List<TariffRate> rates, LocalDate from, LocalDate to) {
+        if (rates == null || rates.isEmpty()) {
+            throw new TariffNotFoundException("No tariff rates available for supplied filters");
+        }
+        return rates.stream()
+                .filter(rate -> overlapsRequestedWindow(rate, from, to))
+                .findFirst()
+                .orElse(rates.get(0));
+    }
+
+    private boolean overlapsRequestedWindow(TariffRate rate, LocalDate from, LocalDate to) {
+        if (from == null && to == null) {
+            return true;
+        }
+        LocalDate windowStart = from != null ? from : LocalDate.MIN;
+        LocalDate windowEnd = to != null ? to : LocalDate.MAX;
+        LocalDate rateStart = rate.getEffectiveFrom() != null ? rate.getEffectiveFrom() : LocalDate.MIN;
+        LocalDate rateEnd = rate.getEffectiveTo() != null ? rate.getEffectiveTo() : LocalDate.MAX;
+        return !rateStart.isAfter(windowEnd) && !rateEnd.isBefore(windowStart);
     }
 
     public String generateAiSummary(TariffCalcResponse resp) {
@@ -211,9 +313,13 @@ public class TariffService {
             Tariff inputs:
             - Origin country: %s
             - Destination country: %s
+            - HS code: %s
             - Product category: %s
-            - Effective date: %s
-            - Declared value (USD): %s
+            - Tariff schedule window: %s to %s
+            - Requested period: %s to %s
+            - Declared value per unit (USD): %s
+            - Weight applied (kg): %s
+            - Weighted declared value (USD): %s
             - Base rate: %s
             - Calculated tariff amount: %s
             - Additional fee: %s
@@ -223,8 +329,14 @@ public class TariffService {
             """,
             resp.originCountryCode,
             resp.destinationCountryCode,
+            resp.hsCode == null ? "-" : resp.hsCode,
             resp.productCategoryCode,
-            resp.effectiveDate,
+            resp.rateEffectiveFrom == null ? "n/a" : resp.rateEffectiveFrom,
+            resp.rateEffectiveTo == null ? "open" : resp.rateEffectiveTo,
+            resp.requestedEffectiveFrom == null ? "n/a" : resp.requestedEffectiveFrom,
+            resp.requestedEffectiveTo == null ? "n/a" : resp.requestedEffectiveTo,
+            resp.declaredValuePerUnit.toPlainString(),
+            resp.weight == null ? "n/a" : resp.weight.toString(),
             resp.declaredValue.toPlainString(),
             resp.baseRate.toPlainString(),
             resp.tariffAmount.toPlainString(),
@@ -418,9 +530,22 @@ public class TariffService {
 
             document.add(new Paragraph("Origin Country: " + resp.originCountryCode));
             document.add(new Paragraph("Destination Country: " + resp.destinationCountryCode));
-            document.add(new Paragraph("Product Category: " + resp.productCategoryCode));
-            document.add(new Paragraph("Effective Date: " + resp.effectiveDate));
-            document.add(new Paragraph("Declared Value: " + resp.declaredValue));
+            document.add(new Paragraph("HS Code: " + (resp.hsCode == null ? "-" : resp.hsCode)));
+            String categoryDisplay = resp.productCategoryName != null
+                    ? resp.productCategoryName + " (" + resp.productCategoryCode + ")"
+                    : resp.productCategoryCode;
+            document.add(new Paragraph("Product Category: " + categoryDisplay));
+            document.add(new Paragraph(String.format("Tariff Schedule: %s to %s",
+                    resp.rateEffectiveFrom == null ? "-" : resp.rateEffectiveFrom,
+                    resp.rateEffectiveTo == null ? "open-ended" : resp.rateEffectiveTo)));
+            document.add(new Paragraph(String.format("Requested Window: %s to %s",
+                    resp.requestedEffectiveFrom == null ? "-" : resp.requestedEffectiveFrom,
+                    resp.requestedEffectiveTo == null ? "-" : resp.requestedEffectiveTo)));
+            document.add(new Paragraph("Declared Value (per unit): " + resp.declaredValuePerUnit));
+            if (Boolean.TRUE.equals(resp.weightBased)) {
+                document.add(new Paragraph("Weight Applied (kg): " + (resp.weight == null ? "-" : resp.weight)));
+            }
+            document.add(new Paragraph("Weighted Declared Value: " + resp.declaredValue));
             document.add(new Paragraph(" "));
 
             PdfPTable table = new PdfPTable(2);
@@ -468,11 +593,13 @@ public class TariffService {
         ProductCategory cat = productCategoryRepository.findByCode(dto.productCategoryCode.toUpperCase())
                 .orElseThrow(() -> new InvalidTariffRequestException("Unknown product category code: " + dto.productCategoryCode));
 
+        BigDecimal storedBaseRate = dto.baseRate;
+
         return new TariffRate(
                 origin,
                 dest,
                 cat,
-                dto.baseRate,
+                storedBaseRate,
                 dto.additionalFee,
                 dto.effectiveFrom,
                 dto.effectiveTo
@@ -496,13 +623,16 @@ public class TariffService {
         dto.originCountryCode = rate.getOrigin().getCode();
         dto.destinationCountryCode = rate.getDestination().getCode();
         dto.productCategoryCode = rate.getProductCategory().getCode();
+        dto.productCategoryName = rate.getProductCategory().getName();
+        dto.hsCode = rate.getProductCategory().getHsCode();
+        dto.weightBased = rate.getProductCategory().getWeightBased();
+        dto.weightValue = rate.getWeightValue();
         dto.baseRate = rate.getBaseRate();
         dto.additionalFee = rate.getAdditionalFee();
         dto.effectiveFrom = rate.getEffectiveFrom();
         dto.effectiveTo = rate.getEffectiveTo();
         return dto;
     }
+
 }
-
-
 
