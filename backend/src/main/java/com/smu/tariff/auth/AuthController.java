@@ -65,14 +65,14 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Email is taken");
         }
 
-        if (!PasswordValidator.isValid(request.password)) {
+        if (!PasswordValidator.isValid(request.getPassword())) {
             return ResponseEntity.badRequest().body(
                 "Password must be 8 - 100 characters long, include uppercase, lowercase, a digit, and a special character."
             );
         }
-        Role role = request.role == null ? Role.USER : request.role;
+        Role role = request.getRole() == null ? Role.USER : request.getRole();
         User user = new User(normalizedUsername, normalizedEmail,
-                passwordEncoder.encode(request.password), role);
+                passwordEncoder.encode(request.getPassword()), role);
         userRepository.save(user);
         String token = jwtService.generateToken(user);
         return ResponseEntity.ok(new AuthResponse(token, user.getUsername(), user.getRole().name()));
