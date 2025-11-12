@@ -428,7 +428,7 @@ export default function CalculatePage() {
               breakdown.
             </p>
             <form onSubmit={submit} noValidate className="calc-form">
-              <div className="inline-fields field-cluster">
+              <div className="inline-fields field-cluster compact">
                 <div className="field" style={{ flex: "1 1 220px" }}>
                   <label htmlFor="origin">
                     Origin Country{" "}
@@ -459,7 +459,7 @@ export default function CalculatePage() {
                 </div>
               </div>
 
-              <div className="inline-fields field-cluster">
+              <div className="inline-fields field-cluster compact">
                 <div className="field" style={{ flex: "1 1 220px" }}>
                   <label htmlFor="hsCode">
                     HS Code <span style={{ color: "#f87171" }}>*</span>
@@ -488,7 +488,7 @@ export default function CalculatePage() {
                 </div>
               </div>
 
-              <div className="inline-fields field-cluster">
+              <div className="inline-fields field-cluster compact">
                 <div className="field" style={{ flex: "1 1 220px" }}>
                   <label htmlFor="declared">
                     Declared Value (USD){" "}
@@ -548,7 +548,7 @@ export default function CalculatePage() {
                 </div>
               </div>
 
-              <div className="inline-fields field-cluster">
+              <div className="inline-fields field-cluster compact">
                 <div className="field" style={{ flex: "1 1 220px" }}>
                   <label htmlFor="effectiveFrom">Effective From (optional)</label>
                   <input

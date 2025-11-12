@@ -1,13 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import api from "../services/api.js";
 import MotionWrapper from "../components/MotionWrapper.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import Select from "../components/Select.jsx";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import {
-  COUNTRY_CODES,
-  PRODUCT_CATEGORY_CODES,
-} from "../constants/referenceOptions.js";
+import { useReferenceOptions } from "../hooks/useReferenceOptions.js";
+import { formatStoredPercent } from "../utils/percent.js";
 
 export default function RatesPage() {
   const [origin, setOrigin] = useState("");
@@ -16,53 +13,38 @@ export default function RatesPage() {
   const [rows, setRows] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { countries, categories } = useReferenceOptions();
 
-  // Process data for historical trend chart
-  const getHistoricalData = () => {
-    if (rows.length === 0) return [];
-    
-    // Group data by date and calculate average base rate
-    const dataByDate = rows.reduce((acc, row) => {
-      const date = row.effectiveFrom;
-      if (!acc[date]) {
-        acc[date] = { date, rates: [], totalRate: 0, count: 0 };
-      }
-      const baseRate = parseFloat(row.baseRate);
-      if (!isNaN(baseRate)) {
-        acc[date].rates.push(baseRate);
-        acc[date].totalRate += baseRate;
-        acc[date].count += 1;
-      }
-      return acc;
-    }, {});
+  const countryOptions = useMemo(() => {
+    const base = countries && countries.length ? countries : [];
+    return [{ value: "", label: "(Any)" }, ...base];
+  }, [countries]);
 
-    // Calculate averages and format for chart
-    const result = Object.values(dataByDate)
-      .filter(item => item.count > 0) // Only include dates with valid data
-      .map(item => ({
-        date: item.date,
-        averageBaseRate: parseFloat((item.totalRate / item.count).toFixed(2)),
-        count: item.count
-      }))
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
+  const categoryOptions = useMemo(() => {
+    const base = categories && categories.length ? categories : [];
+    return [{ value: "", label: "(Any)" }, ...base];
+  }, [categories]);
 
-    // If only one data point, duplicate it to create a flat line
-    if (result.length === 1) {
-      const singlePoint = result[0];
-      result.push({
-        date: (() => {
-          const d = new Date(singlePoint.date);
-          // Add one day (in ms)
-          d.setDate(d.getDate() + 1);
-          return d.toISOString().slice(0, 10); // Format as YYYY-MM-DD
-        })(),
-        averageBaseRate: singlePoint.averageBaseRate,
-        count: singlePoint.count
-      });
+  useEffect(() => {
+    if (origin && !countryOptions.some((option) => option.value === origin)) {
+      setOrigin("");
     }
+    if (
+      destination &&
+      !countryOptions.some((option) => option.value === destination)
+    ) {
+      setDestination("");
+    }
+  }, [countryOptions, origin, destination]);
 
-    return result;
-  };
+  useEffect(() => {
+    if (
+      category &&
+      !categoryOptions.some((option) => option.value === category)
+    ) {
+      setCategory("");
+    }
+  }, [categoryOptions, category]);
 
   const search = async (e) => {
     e?.preventDefault();
@@ -73,7 +55,7 @@ export default function RatesPage() {
       if (origin) params.set("origin", origin);
       if (destination) params.set("destination", destination);
       if (category) params.set("category", category);
-      const r = await api.get("/api/tariffs/rates?" + params.toString());
+      const r = await api.get("/tariffs/rates?" + params.toString());
       setRows(r.data);
     } catch (err) {
       setError(err?.response?.data || "Search failed");
@@ -106,14 +88,14 @@ export default function RatesPage() {
           product category.
         </p>
         <form onSubmit={search} noValidate>
-          <div className="inline-fields field-cluster">
+          <div className="inline-fields field-cluster compact">
             <div className="field" style={{ flex: "1 1 200px" }}>
               <label htmlFor="origin">Origin</label>
               <Select
                 id="origin"
                 value={origin}
                 onChange={setOrigin}
-                options={COUNTRY_CODES}
+                options={countryOptions}
                 placeholder="(Any)"
               />
             </div>
@@ -123,7 +105,7 @@ export default function RatesPage() {
                 id="destination"
                 value={destination}
                 onChange={setDestination}
-                options={COUNTRY_CODES}
+                options={countryOptions}
                 placeholder="(Any)"
               />
             </div>
@@ -133,14 +115,13 @@ export default function RatesPage() {
                 id="category"
                 value={category}
                 onChange={setCategory}
-                options={PRODUCT_CATEGORY_CODES}
-                placeholder="(Any)"
+                options={categoryOptions}
               />
             </div>
           </div>
           <div className="btn-group" style={{ marginTop: 8 }}>
             <button className="primary" type="submit" disabled={loading}>
-              {loading ? "Searching…" : "Search"}
+              {loading ? "Searching..." : "Search"}
             </button>
             <button
               type="button"
@@ -177,7 +158,7 @@ export default function RatesPage() {
             animate={{ opacity: 1 }}
           >
             <div className="spinner" aria-hidden="true" />
-            <span className="small">Fetching matching tariff rates…</span>
+            <span className="small">Fetching matching tariff rates...</span>
           </motion.div>
         )}
 

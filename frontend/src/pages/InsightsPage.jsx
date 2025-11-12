@@ -426,7 +426,7 @@ export default function InsightsPage() {
           }}
           noValidate
         >
-          <div className="inline-fields field-cluster">
+          <div className="inline-fields field-cluster compact">
             <div className="field" style={{ flex: "1 1 220px" }}>
               <label htmlFor="countrySelect">Country</label>
               <Select
