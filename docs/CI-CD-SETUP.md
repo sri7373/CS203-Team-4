@@ -38,7 +38,7 @@ Deploys to production when code is pushed to `main` or when a version tag is cre
 
 ### Coverage & Test Artifacts
 
-- JaCoCo thresholds (currently 40% branch / 55% line) live in `backend/pom.xml`.
+- JaCoCo thresholds live in `backend/pom.xml` (currently **10 % branch** / **25 % line**). Raise them as soon as coverage improves.
 - Every CI run uploads `backend-test-results` and `backend-coverage-report` artifacts. Download them from the workflow run (Actions -> CI -> Artifacts) to inspect JUnit XML or open `target/site/jacoco/index.html`.
 - If coverage fails locally or in CI, run `mvn clean verify` in `backend/` to reproduce; JaCoCo output lives under `backend/target`.
 

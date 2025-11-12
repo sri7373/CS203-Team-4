@@ -97,7 +97,7 @@ Our automated pipeline includes:
 - Code quality checks and linting
 - Security vulnerability scanning
 - Docker image builds
-- Test coverage reports with JaCoCo thresholds
+- Test coverage reports with JaCoCo gates (currently 10 % branch / 25 % line)
 
 ### Continuous Deployment (CD)
 - **Production**: Auto-deploy on push to `main` or tagged releases
