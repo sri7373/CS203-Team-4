@@ -8,16 +8,16 @@ SMU CS students for the CS203 Collaborative Software Development module. The sys
 
 ## Features
 
-- ✅ Dynamic tariff rate calculations
-- ✅ Multi-country and multi-industry support
-- ✅ Real-time news integration
-- ✅ Admin dashboard for tariff management
-- ✅ User authentication with JWT
-- ✅ RESTful API with comprehensive documentation
-- ✅ Responsive React frontend
-- ✅ CI/CD pipeline with automated deployments
-- ✅ AWS RDS database integration
-- ✅ Docker containerization
+- Dynamic tariff rate calculations
+- Multi-country and multi-industry support
+- Real-time news integration
+- Admin dashboard for tariff management
+- User authentication with JWT
+- RESTful API with comprehensive documentation
+- Responsive React frontend
+- CI/CD pipeline with automated deployments and coverage enforcement
+- AWS RDS database integration
+- Docker containerization
 
 ## Tech Stack
 
@@ -75,9 +75,9 @@ chmod +x scripts/local-deploy.sh
 ### Production Deployment
 
 See our comprehensive guides:
-- **[CI/CD Quick Start Guide](./docs/CICD-QUICKSTART.md)** - Get started in 5 minutes
-- **[Full CI/CD Setup Documentation](./docs/CI-CD-SETUP.md)** - Detailed setup instructions
-- **[Docker Documentation](./docs/DOCKER.md)** - Docker configuration details
+- **[CI/CD Operations Overview](./docs/CI-CD-OVERVIEW.md)** – What each workflow does and how to use the artifacts
+- **[Full CI/CD Setup Documentation](./docs/CI-CD-SETUP.md)** – Detailed setup instructions
+- **[Docker Documentation](./docs/DOCKER.md)** – Docker configuration details
 
 ## Documentation
 
@@ -93,23 +93,23 @@ See our comprehensive guides:
 Our automated pipeline includes:
 
 ### Continuous Integration (CI)
-- ✅ Automated testing for backend and frontend
-- ✅ Code quality checks and linting
-- ✅ Security vulnerability scanning
-- ✅ Docker image builds
-- ✅ Test coverage reports
+- Automated testing for backend and frontend
+- Code quality checks and linting
+- Security vulnerability scanning
+- Docker image builds
+- Test coverage reports with JaCoCo thresholds
 
 ### Continuous Deployment (CD)
-- ✅ **Production**: Auto-deploy on push to `main` or `develop` branch
-- ✅ Version tags supported (v*.*.*)
-- ✅ Blue-green deployment strategy
-- ✅ Automated database migrations
-- ✅ Health checks and smoke tests
-- ✅ Automatic rollback on failure
+- **Production**: Auto-deploy on push to `main` or tagged releases
+- Version tags supported (v*.*.*)
+- Blue-green deployment strategy
+- Automated database migrations
+- Health checks and smoke tests
+- Automatic rollback on failure
 
 ### Deployment Workflow
 ```
-Feature Branch → PR → Develop/Main → Production
+Feature Branch -> PR -> Develop/Main -> Production
 ```
 
 ## Branch Strategy
@@ -118,4 +118,6 @@ Feature Branch → PR → Develop/Main → Production
 - `develop` - Development branch (auto-deploys to production)
 - `feature/*` - New features
 - `hotfix/*` - Critical production fixes
+
+
 
