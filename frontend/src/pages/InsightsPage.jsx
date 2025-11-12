@@ -165,20 +165,50 @@ export default function InsightsPage() {
     });
   };
 
-  const renderProductList = (items = [], type = "import") => {
-    if (!items.length) {
-      return (
-        <motion.div
-          className="metric-card"
-          style={{ padding: 24, textAlign: "center" }}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <p className="label" style={{ marginBottom: 0 }}>
-            No {type} tariff data available.
+  const renderEmptyStateCard = ({ title, message, delay = 0 }) => (
+    <motion.div
+      className="metric-card empty-state-card"
+      role="status"
+      aria-live="polite"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay }}
+    >
+      <div className="empty-state-body">
+        <div className="empty-state-icon" aria-hidden="true">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="9" opacity="0.6" />
+            <path d="M8 12h8" />
+          </svg>
+        </div>
+        <div>
+          <p className="label" style={{ marginBottom: 2 }}>
+            {title}
           </p>
-        </motion.div>
-      );
+          <p className="tiny" style={{ margin: 0 }}>
+            {message}
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  );
+
+  const renderProductList = (items = [], type = "import") => {
+    if (!items || !items.length) {
+      return renderEmptyStateCard({
+        title: `No ${type} tariff records`,
+        message:
+          "Try a different country or timeframe to discover tariff categories.",
+      });
     }
     return (
       <div style={{ display: "grid", gap: 12 }}>
@@ -279,20 +309,11 @@ export default function InsightsPage() {
           {title}
         </h4>
         {!partners.length ? (
-          <motion.div
-            className="small"
-            style={{
-              marginTop: 8,
-              padding: 16,
-              textAlign: "center",
-              opacity: 0.7,
-              background: "rgba(255,255,255,0.05)",
-              borderRadius: 8,
-            }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.7 }}
-          >
-          </motion.div>
+          renderEmptyStateCard({
+            title: `No ${title} partners available`,
+            message: `We don't have major partner flows for ${title.toLowerCase()} on ${country}.`,
+            delay: 0.05,
+          })
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
             {partners.map((partner, index) => {
