@@ -5,6 +5,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import Select from "../components/Select.jsx";
 import { useReferenceOptions } from "../hooks/useReferenceOptions.js";
 import { formatStoredPercent } from "../utils/percent.js";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function RatesPage() {
   const [origin, setOrigin] = useState("");
