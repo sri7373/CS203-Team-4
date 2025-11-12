@@ -94,7 +94,8 @@ h3 { font-size: var(--text-xl); margin-top: var(--space-5); }
 form { margin:0; }
 label { display:block; font-size: var(--text-sm); font-weight:600; margin: 0 0 var(--space-1); color: var(--color-text-muted); text-transform: uppercase; letter-spacing:.5px; }
 .field { margin-bottom: var(--space-4); }
-.inline-fields { display:flex; gap: var(--space-4); flex-wrap:wrap; }
+.inline-fields { display:flex; gap: var(--space-3); flex-wrap:wrap; }
+.inline-fields .field:last-child { margin-bottom:0; }
 
 .input, select { width:100%; padding: 10px 12px; border-radius: var(--radius-sm); border:1px solid var(--color-border); background: var(--color-bg-alt); color: var(--color-text); font-size: var(--text-md); line-height:1.4; transition: border-color var(--transition), background var(--transition); }
 .input:focus, select:focus { outline:2px solid var(--color-focus-ring); outline-offset:2px; border-color: var(--color-focus-ring); }
@@ -262,10 +263,15 @@ footer .legal { margin-top: var(--space-2); font-size: var(--text-xs); opacity:.
        .workspace-narrow { padding: 24px 16px; }
        .card { padding: var(--space-4); }
        .container { padding: var(--space-5) var(--space-4); }
-       .inline-fields { flex-direction:column; gap: var(--space-2); }
+       .inline-fields { flex-direction:column; gap: 6px; }
+       .inline-fields .field { margin-bottom: 6px; }
+       .inline-fields .field:last-child { margin-bottom: 0; }
        .btn-group { flex-direction:column; align-items:stretch; }
        .calculate-layout { grid-template-columns: 1fr !important; gap: 16px !important; }
        .tariff-news-sidebar { position:relative !important; top:auto !important; max-height:none !important; }
+       .field-cluster { padding: 10px 12px 6px; }
+       .field-cluster + .field-cluster { margin-top: 10px; }
+       .field-cluster .field { margin-bottom: 6px; }
        .table-responsive table { min-width:600px; }
 }
 
@@ -326,6 +332,7 @@ button, .input, select { position: relative; z-index: 1; }
 [data-theme="dark"] .field-cluster { background: var(--color-bg); }
 .field-cluster + .field-cluster { margin-top:18px; }
 .field-cluster .field { margin-bottom:18px; }
+.field-cluster .field:last-child { margin-bottom:0; }
 .field-cluster.compact { padding:14px 16px 6px; }
 .field-cluster.compact .field { margin-bottom:12px; }
 .calc-form label { letter-spacing:.75px; }

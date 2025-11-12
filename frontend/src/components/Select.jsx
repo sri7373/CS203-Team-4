@@ -24,6 +24,14 @@ export default function Select({
   );
   const selected = normOptions.find((opt) => opt.value === value);
 
+  const chooseOption = (event, optionValue) => {
+    if (event?.preventDefault) {
+      event.preventDefault();
+    }
+    onChange(optionValue);
+    close();
+  };
+
   const close = useCallback(() => {
     setOpen(false);
     setHighlight(-1);
@@ -177,11 +185,8 @@ export default function Select({
                   isActive ? "active" : ""
                 }`}
                 onMouseEnter={() => setHighlight(index)}
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  onChange(opt.value);
-                  close();
-                }}
+                onMouseDown={(event) => chooseOption(event, opt.value)}
+                onPointerDown={(event) => chooseOption(event, opt.value)}
               >
                 <span>{opt.label}</span>
                 {isSelected && (
