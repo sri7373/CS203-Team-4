@@ -84,32 +84,38 @@ class ReferenceControllerTest {
         countryRepository.save(new Country("USA", "United States"));
         countryRepository.save(new Country("CHN", "China"));
 
-        ProductCategory electronics = new ProductCategory();
-        electronics.setCode("ELEC");
-        electronics.setName("Electronics");
-        electronics.setHsCode("85");
-        electronics.setWeightBased(false);
-        productCategoryRepository.save(electronics);
+                        productCategoryRepository.findByCode("ELEC")
+                                .orElseGet(() -> {
+                                        ProductCategory cat = new ProductCategory();
+                                        cat.setCode("ELEC");
+                                        cat.setName("Electronics");
+                                        cat.setHsCode("85");
+                                        cat.setWeightBased(false);
+                                        return productCategoryRepository.save(cat);
+                                });
 
-        ProductCategory steel = new ProductCategory();
-        steel.setCode("STEEL");
-        steel.setName("Steel Products");
-        steel.setHsCode("72");
-        steel.setWeightBased(false);
-        productCategoryRepository.save(steel);
+                        productCategoryRepository.findByCode("STEEL")
+                                .orElseGet(() -> {
+                                        ProductCategory cat = new ProductCategory();
+                                        cat.setCode("STEEL");
+                                        cat.setName("Steel Products");
+                                        cat.setHsCode("72");
+                                        cat.setWeightBased(false);
+                                        return productCategoryRepository.save(cat);
+                                });
 
         // Create test users with different roles
         User regularUser = new User(
                 "testuser",
                 "test@example.com",
-                passwordEncoder.encode("password123"),
+                passwordEncoder.encode("validPass123"),
                 Role.USER);
         userRepository.save(regularUser);
 
         User adminUser = new User(
                 "adminuser",
                 "admin@example.com",
-                passwordEncoder.encode("password123"),
+                passwordEncoder.encode("validPass123"),
                 Role.ADMIN);
         userRepository.save(adminUser);
 

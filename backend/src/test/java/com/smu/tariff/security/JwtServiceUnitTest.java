@@ -34,7 +34,7 @@ class JwtServiceUnitTest {
 
     @Test
     void generateAndValidateToken() {
-        UserDetails user = new User("alice", "pw", List.of(new SimpleGrantedAuthority("ROLE_USER")));
+    UserDetails user = new User("alice", "validPass123", List.of(new SimpleGrantedAuthority("ROLE_USER")));
         String token = jwtService.generateToken(user);
         assertNotNull(token);
         assertEquals("alice", jwtService.extractUsername(token));

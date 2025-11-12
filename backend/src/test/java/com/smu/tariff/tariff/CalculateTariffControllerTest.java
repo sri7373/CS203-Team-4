@@ -113,7 +113,7 @@ class CalculateTariffControllerTest {
         User testUser = new User(
                 "testuser",
                 "test@example.com",
-                passwordEncoder.encode("password123"),
+                passwordEncoder.encode("validPass123"),
                 Role.USER);
         userRepository.save(testUser);
     // generate JWT for authenticated requests

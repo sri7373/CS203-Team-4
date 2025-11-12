@@ -89,7 +89,7 @@ class TariffControllerIntegrationTest {
         setupTestUsers();
 
         // Authenticate and extract JWT tokens
-        userJwtToken = authenticateAndGetToken("testuser", "password123");
+    userJwtToken = authenticateAndGetToken("testuser", "validPass123");
         adminJwtToken = authenticateAndGetToken("testadmin", "admin123");
     }
     
@@ -163,7 +163,7 @@ class TariffControllerIntegrationTest {
             User user = new User(
                 "testuser", 
                 "testuser@example.com",
-                passwordEncoder.encode("password123"),
+                passwordEncoder.encode("validPass123"),
                 Role.USER
             );
             userRepository.save(user);
@@ -174,7 +174,7 @@ class TariffControllerIntegrationTest {
             User admin = new User(
                 "testadmin",
                 "admin@example.com",
-                passwordEncoder.encode("admin123"),
+                passwordEncoder.encode("adminPass123"),
                 Role.ADMIN
             );
             userRepository.save(admin);

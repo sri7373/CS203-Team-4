@@ -90,25 +90,31 @@ class TradeAnalyticsControllerTest {
         usa = countryRepository.save(new Country("USA", "United States"));
         japan = countryRepository.save(new Country("JPN", "Japan"));
 
-    electronics = new ProductCategory();
-        electronics.setCode("ELEC");
-        electronics.setName("Electronics");
-        electronics.setHsCode("85");
-        electronics.setWeightBased(false);
-    productCategoryRepository.save(electronics);
+    electronics = productCategoryRepository.findByCode("ELEC")
+        .orElseGet(() -> {
+            ProductCategory cat = new ProductCategory();
+            cat.setCode("ELEC");
+            cat.setName("Electronics");
+            cat.setHsCode("85");
+            cat.setWeightBased(false);
+            return productCategoryRepository.save(cat);
+        });
 
-    food = new ProductCategory();
-        food.setCode("FOOD");
-        food.setName("Food & Beverages");
-        food.setHsCode("04");
-        food.setWeightBased(false);
-    productCategoryRepository.save(food);
+    food = productCategoryRepository.findByCode("FOOD")
+        .orElseGet(() -> {
+            ProductCategory cat = new ProductCategory();
+            cat.setCode("FOOD");
+            cat.setName("Food & Beverages");
+            cat.setHsCode("04");
+            cat.setWeightBased(false);
+            return productCategoryRepository.save(cat);
+        });
 
     // Create test user
         User testUser = new User(
                 "testuser",
                 "test@example.com",
-                passwordEncoder.encode("password123"),
+                passwordEncoder.encode("validPass123"),
                 Role.USER);
         userRepository.save(testUser);
 
