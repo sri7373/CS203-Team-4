@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api.js";
 import { setAuth } from "../services/auth.js";
@@ -118,30 +118,14 @@ export default function RegisterPage() {
         } else if (typeof data === "string") {
           setError(data);
         } else {
-          // Handle based on HTTP status code
-          switch (status) {
-            case 400:
-              setError("Invalid registration data. Please check your inputs.");
-              break;
-            case 409:
-              setError(
-                "Username or email already exists. Please choose different credentials."
-              );
-              break;
-            case 422:
-              setError(
-                "Validation failed. Please ensure all fields are filled correctly."
-              );
-              break;
-            case 500:
-              setError("Server error. Please try again later.");
-              break;
-            case 503:
-              setError("Service unavailable. Please try again later.");
-              break;
-            default:
-              setError(`Registration failed with status ${status}`);
-          }
+          const statusMessages = {
+            400: "Invalid registration data. Please verify each field.",
+            409: "This username or email is already registered. Choose different credentials.",
+            422: "Validation failed. Please ensure all fields are filled correctly.",
+            500: "Server error. Please try again later.",
+            503: "Service unavailable. Please try again later.",
+          };
+          setError(statusMessages[status] || `Registration failed (${status}).`);
         }
       } else if (err.request) {
         // Request was made but no response received
@@ -246,3 +230,6 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+
+

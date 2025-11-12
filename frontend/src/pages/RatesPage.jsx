@@ -88,7 +88,7 @@ export default function RatesPage() {
           product category.
         </p>
         <form onSubmit={search} noValidate>
-          <div className="inline-fields field-cluster">
+          <div className="inline-fields field-cluster compact">
             <div className="field" style={{ flex: "1 1 200px" }}>
               <label htmlFor="origin">Origin</label>
               <Select
