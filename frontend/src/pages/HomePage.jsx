@@ -16,7 +16,7 @@ export default function HomePage() {
               Welcome back
             </p>
             <h2 style={{ margin: "4px 0 8px" }}>
-              {user?.username ? `${user.username},` : "Analyst,"} your tariff cockpit is ready
+              {user?.username ? `${user.username},` : "Analyst,"} your tariff dashboard is ready
             </h2>
             <p className="small" style={{ margin: 0 }}>
               Access calculators, live rates, and trade insights from one place. Everything here is optimised for fast, on-the-go decisions.

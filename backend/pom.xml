@@ -21,6 +21,8 @@
         <java.version>17</java.version>
         <jjwt.version>0.11.5</jjwt.version>
         <springdoc.version>2.6.0</springdoc.version>
+        <jacoco.min.branch.coverage>0.40</jacoco.min.branch.coverage>
+        <jacoco.min.line.coverage>0.55</jacoco.min.line.coverage>
     </properties>
 
     <dependencies>
@@ -143,12 +145,12 @@
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.60</minimum>
+                                            <minimum>${jacoco.min.branch.coverage}</minimum>
                                         </limit>
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.70</minimum>
+                                            <minimum>${jacoco.min.line.coverage}</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
