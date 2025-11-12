@@ -466,6 +466,47 @@ button, .input, select { position: relative; z-index: 1; }
   gap: 16px;
   margin-top: 24px;
 }
+
+.manage-drawer {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.manage-list {
+  flex: 1 1 260px;
+  max-height: 60vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.manage-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-elev-1);
+  gap: 12px;
+}
+
+.manage-card.active {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.manage-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.manage-form {
+  flex: 1 1 300px;
+}
 .table-glow .btn-group {
   display: flex;
   gap: 6px;
