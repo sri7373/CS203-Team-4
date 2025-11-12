@@ -67,7 +67,7 @@ public class AuthController {
 
         if (!PasswordValidator.isValid(request.getPassword())) {
             return ResponseEntity.badRequest().body(
-                "Password must be 8 - 100 characters long, include uppercase, lowercase, a digit, and a special character."
+                "Password must be at least 8 characters long (max 100), include uppercase, lowercase, a digit, and a special character."
             );
         }
         Role role = request.getRole() == null ? Role.USER : request.getRole();

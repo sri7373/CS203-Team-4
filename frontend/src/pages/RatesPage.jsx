@@ -50,7 +50,12 @@ export default function RatesPage() {
     if (result.length === 1) {
       const singlePoint = result[0];
       result.push({
-        date: singlePoint.date + " (End)",
+        date: (() => {
+          const d = new Date(singlePoint.date);
+          // Add one day (in ms)
+          d.setDate(d.getDate() + 1);
+          return d.toISOString().slice(0, 10); // Format as YYYY-MM-DD
+        })(),
         averageBaseRate: singlePoint.averageBaseRate,
         count: singlePoint.count
       });
