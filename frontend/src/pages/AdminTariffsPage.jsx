@@ -710,7 +710,7 @@ export default function AdminTariffsPage() {
         )}
 
         <form onSubmit={handleSubmit} noValidate className="admin-form">
-          <div className="inline-fields field-cluster">
+              <div className="inline-fields field-cluster compact">
             <div className="field" style={{ flex: "1 1 220px" }}>
               <label htmlFor="originCountryCode">Origin Country Code</label>
               <Select
@@ -748,7 +748,7 @@ export default function AdminTariffsPage() {
             </div>
           </div>
 
-          <div className="inline-fields field-cluster">
+              <div className="inline-fields field-cluster compact">
             <div className="field" style={{ flex: "1 1 200px" }}>
               <label htmlFor="baseRate">Base Rate (%)</label>
               <input

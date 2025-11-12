@@ -249,8 +249,9 @@ footer .legal { margin-top: var(--space-2); font-size: var(--text-xs); opacity:.
 
 @media (max-width: 900px) {
        nav .wrap { flex-wrap:wrap; align-items:flex-start; }
-       nav .nav-links { order:3; width:100%; display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:8px; margin-top:8px; }
-       nav .nav-links a { justify-content:center; text-align:center; padding:8px; }
+       nav .nav-links { order:3; width:100%; display:flex; overflow-x:auto; gap:8px; padding-bottom:6px; scroll-snap-type:x mandatory; }
+       nav .nav-links::-webkit-scrollbar { height:4px; }
+       nav .nav-links a { flex:0 0 auto; scroll-snap-align:start; padding:8px 12px; }
        nav .right { order:2; width:100%; justify-content:space-between; flex-wrap:wrap; gap: var(--space-2); margin-top:8px; }
        nav .brand { order:1; }
 }
@@ -261,7 +262,7 @@ footer .legal { margin-top: var(--space-2); font-size: var(--text-xs); opacity:.
        .workspace-narrow { padding: 24px 16px; }
        .card { padding: var(--space-4); }
        .container { padding: var(--space-5) var(--space-4); }
-       .inline-fields { flex-direction:column; gap: var(--space-3); }
+       .inline-fields { flex-direction:column; gap: var(--space-2); }
        .btn-group { flex-direction:column; align-items:stretch; }
        .calculate-layout { grid-template-columns: 1fr !important; gap: 16px !important; }
        .tariff-news-sidebar { position:relative !important; top:auto !important; max-height:none !important; }
@@ -304,6 +305,14 @@ footer .legal { margin-top: var(--space-2); font-size: var(--text-xs); opacity:.
 .features-grid .card { height:100%; display:flex; flex-direction:column; justify-content:flex-start; }
 /* Neutralize stacked card sibling margin in grid context */
 .features-grid .card + .card { margin-top:0; }
+.dashboard-hero { display:flex; flex-direction:column; gap:16px; margin-bottom:24px; }
+.dashboard-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
+.dashboard-card { padding:20px; border-radius:var(--radius-lg); border:1px solid var(--color-border); background:var(--color-surface); box-shadow:var(--shadow-elev-1); min-height:180px; display:flex; flex-direction:column; gap:12px; }
+.dashboard-card h3 { margin:0; font-size:var(--text-lg); }
+.dashboard-card-header { display:flex; align-items:center; gap:12px; }
+.dashboard-card-icon { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:1px solid rgba(99,102,241,0.4); color: var(--color-primary); background: transparent; }
+.dashboard-card-icon svg { display:block; width:24px; height:24px; }
+.dashboard-card-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 
 /* Fix for buttons / inputs sometimes appearing inert due to overlay stacking */
 button, .input, select { position: relative; z-index: 1; }
@@ -317,6 +326,8 @@ button, .input, select { position: relative; z-index: 1; }
 [data-theme="dark"] .field-cluster { background: var(--color-bg); }
 .field-cluster + .field-cluster { margin-top:18px; }
 .field-cluster .field { margin-bottom:18px; }
+.field-cluster.compact { padding:14px 16px 6px; }
+.field-cluster.compact .field { margin-bottom:12px; }
 .calc-form label { letter-spacing:.75px; }
 .calc-form select, .calc-form .input { background: var(--color-bg-alt); border:1px solid rgba(255,255,255,0.07); box-shadow: inset 0 1px 2px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.04); }
 .calc-form select:focus, .calc-form .input:focus { border-color: var(--color-primary); outline:2px solid var(--color-primary); }
