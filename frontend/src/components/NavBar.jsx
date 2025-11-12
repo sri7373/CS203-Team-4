@@ -33,7 +33,9 @@ export default function NavBar() {
     <nav aria-label="Primary">
       <div className="wrap">
         <Link to="/" className="brand" aria-label="Tariff Home">
-          <span className="logo" />
+          <span className="logo" aria-hidden="true">
+            TS
+          </span>
           <span>TARIFFSHERIFF</span>
         </Link>
         {loggedIn && (
@@ -106,12 +108,7 @@ export default function NavBar() {
             </div>
           )}
           {loggedIn && (
-            <button
-              type="button"
-              onClick={doLogout}
-              className="danger"
-              aria-label="Logout"
-            >
+            <button type="button" onClick={doLogout} className="logout-button" aria-label="Logout">
               Logout
             </button>
           )}

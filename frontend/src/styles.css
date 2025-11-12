@@ -120,13 +120,42 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 nav { background: (rgba(196, 208, 255, 0.78), rgba(10,12,20,0.55)); border-bottom:1px solid rgba(255,255,255,0.05); box-shadow: 0 2px 4px -2px rgba(0,0,0,.5); position:sticky; top:0; z-index:120; backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%); }
 nav .wrap { max-width:1080px; margin:0 auto; display:flex; align-items:center; gap: var(--space-4); padding: 10px var(--space-5); }
 nav .brand { font-weight:600; font-size: var(--text-lg); letter-spacing:.5px; display:flex; align-items:center; gap:8px; }
-nav .brand span.logo { display:inline-block; width:30px; height:30px; border-radius:8px; background: linear-gradient(135deg,var(--color-primary),var(--color-primary-accent)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+nav .brand span.logo {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  font-weight:700;
+  font-size:14px;
+  letter-spacing:0.6px;
+  color:#fff;
+  background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.45), transparent 55%), linear-gradient(135deg,#2563eb,#a855f7 75%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.35), 0 6px 18px rgba(16,24,40,.25);
+  text-transform:uppercase;
+  position:relative;
+}
 nav a { font-size: var(--text-md); font-weight:500; padding: 6px 10px; border-radius: var(--radius-sm); }
 nav a:hover { background: var(--color-bg-alt); text-decoration:none; }
 nav .nav-links { display:flex; align-items:center; gap: var(--space-3); flex:1; flex-wrap:wrap; min-width:0; }
 nav .nav-links a { white-space:nowrap; }
 nav .right { margin-left:auto; display:flex; gap: var(--space-3); align-items:center; }
 nav .user-meta { font-size: var(--text-sm); color: var(--color-text-muted); }
+nav .right .logout-button {
+  background: linear-gradient(135deg,#ff7a7a,#ff5757);
+  color:#fff;
+  border:none;
+  padding:6px 14px;
+  border-radius:999px;
+  font-size:13px;
+  font-weight:600;
+  letter-spacing:.4px;
+  box-shadow:var(--shadow-elev-1);
+}
+nav .right .logout-button:hover {
+  background: linear-gradient(135deg,#ff8c8c,#ff6767);
+}
 
 /* Tables */
 .table-responsive { width:100%; overflow-x:auto; }
