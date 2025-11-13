@@ -42,9 +42,8 @@ public class User implements UserDetails {
     @Column(unique = true, nullable = false, length = 128)
     private String email;
 
-    // Password cannot be blank and must meet length requirements
+    // Password is stored hashed, so only ensure it is present; request DTOs enforce complexity/length
     @NotBlank(message = "Password cannot be blank")
-    @Size(min = 8, max = 20, message = "must be between 8 and 20 characters")
     @Column(nullable = false, length = 100)
     private String password;
 
