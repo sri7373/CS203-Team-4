@@ -9,6 +9,28 @@ import org.junit.jupiter.api.Test;
 class BaseRateUtilsTest {
 
     @Test
+    void fromStoredPercentageHandlesNegativeAndZero() {
+        assertThat(BaseRateUtils.fromStoredPercentage(BigDecimal.ZERO)).isEqualByComparingTo(BigDecimal.ZERO.setScale(8));
+        assertThat(BaseRateUtils.fromStoredPercentage(new BigDecimal("-5.0000"))).isEqualByComparingTo(new BigDecimal("-0.05000000"));
+    }
+
+    @Test
+    void fromStoredPercentageHandlesLargeValue() {
+        assertThat(BaseRateUtils.fromStoredPercentage(new BigDecimal("123456.7890"))).isEqualByComparingTo(new BigDecimal("1234.56789000"));
+    }
+
+    @Test
+    void toStoredPercentageHandlesNegativeAndZero() {
+        assertThat(BaseRateUtils.toStoredPercentage(BigDecimal.ZERO)).isEqualByComparingTo(BigDecimal.ZERO.setScale(4));
+        assertThat(BaseRateUtils.toStoredPercentage(new BigDecimal("-0.05"))).isEqualByComparingTo(new BigDecimal("-5.0000"));
+    }
+
+    @Test
+    void toStoredPercentageHandlesLargeValue() {
+        assertThat(BaseRateUtils.toStoredPercentage(new BigDecimal("1234.56789"))).isEqualByComparingTo(new BigDecimal("123456.7890"));
+    }
+
+    @Test
     void fromStoredPercentageConvertsToDecimal() {
         BigDecimal stored = new BigDecimal("5.1234");
 

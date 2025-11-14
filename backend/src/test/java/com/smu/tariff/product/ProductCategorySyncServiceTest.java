@@ -20,6 +20,40 @@ import static org.mockito.Mockito.*;
 
 class ProductCategorySyncServiceTest {
 
+    @Test
+    void testFetchAndSyncCategories_handlesNullResponseBody() {
+        when(restTemplate.getForEntity(any(String.class), eq(ProductCategoryDto[].class)))
+                .thenReturn(ResponseEntity.ok(null));
+        // Should not throw, just log and return
+        service.fetchAndSyncCategories();
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void testFetchAndSyncCategories_handlesApiException() {
+        when(restTemplate.getForEntity(any(String.class), eq(ProductCategoryDto[].class)))
+                .thenThrow(new org.springframework.web.client.RestClientException("fail"));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.fetchAndSyncCategories())
+                .isInstanceOf(org.springframework.web.client.RestClientException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void testProcessDto_skipsEmptyCode() {
+        ProductCategoryDto dto = new ProductCategoryDto();
+        dto.setCode("");
+        // Use reflection to call private method for direct branch coverage
+        java.lang.reflect.Method m;
+        try {
+            m = ProductCategorySyncService.class.getDeclaredMethod("processDto", ProductCategoryDto.class);
+            m.setAccessible(true);
+            m.invoke(service, dto);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        verify(repository, never()).save(any());
+    }
+
     @Mock
     private ProductCategoryRepository repository;
 
