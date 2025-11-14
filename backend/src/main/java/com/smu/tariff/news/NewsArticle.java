@@ -250,11 +250,17 @@ public class NewsArticle {
         this.aiContent = aiContent;
     }
 
+
     public Boolean getDuplicate() {
         return duplicate;
     }
 
     public void setDuplicate(Boolean duplicate) {
         this.duplicate = duplicate;
+    }
+
+    // Added for POJO test coverage
+    public boolean isDuplicate() {
+        return Boolean.TRUE.equals(duplicate);
     }
 }

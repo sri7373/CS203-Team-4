@@ -19,6 +19,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class JwtService {
+    // For testing only
+    void setSecret(String secret) { this.secret = secret; }
+    void setJwtExpirationMs(long ms) { this.jwtExpirationMs = ms; }
 
     @Value("${app.jwt.secret}")
     private String secret;

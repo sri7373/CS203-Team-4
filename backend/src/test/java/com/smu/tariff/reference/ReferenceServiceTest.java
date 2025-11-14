@@ -33,6 +33,168 @@ import com.smu.tariff.repository.TariffRateRepository;
 
 @ExtendWith(MockitoExtension.class)
 class ReferenceServiceTest {
+    @Test
+    void normalizeCountryCodeThrowsOnNullOrBlank() throws Exception {
+        var m = ReferenceService.class.getDeclaredMethod("normalizeCountryCode", String.class);
+        m.setAccessible(true);
+        assertThatThrownBy(() -> m.invoke(service, (Object) null)).hasRootCauseInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> m.invoke(service, " ")).hasRootCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void normalizeCategoryCodeThrowsOnNullOrBlank() throws Exception {
+        var m = ReferenceService.class.getDeclaredMethod("normalizeCategoryCode", String.class);
+        m.setAccessible(true);
+        assertThatThrownBy(() -> m.invoke(service, (Object) null)).hasRootCauseInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> m.invoke(service, " ")).hasRootCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void normalizeHsCodeThrowsOnNullOrBlank() throws Exception {
+        var m = ReferenceService.class.getDeclaredMethod("normalizeHsCode", String.class);
+        m.setAccessible(true);
+        assertThatThrownBy(() -> m.invoke(service, (Object) null)).hasRootCauseInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> m.invoke(service, " ")).hasRootCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void normalizeNameThrowsOnNullOrBlank() throws Exception {
+        var m = ReferenceService.class.getDeclaredMethod("normalizeName", String.class);
+        m.setAccessible(true);
+        assertThatThrownBy(() -> m.invoke(service, (Object) null)).hasRootCauseInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> m.invoke(service, " ")).hasRootCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void getCountryThrowsIfNotFound() {
+        when(countryRepository.findByCode("SGP")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> {
+            var m = ReferenceService.class.getDeclaredMethod("getCountry", String.class);
+            m.setAccessible(true);
+            m.invoke(service, "SGP");
+        }).hasRootCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void getCategoryThrowsIfNotFound() {
+        when(productCategoryRepository.findByCode("ELEC")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> {
+            var m = ReferenceService.class.getDeclaredMethod("getCategory", String.class);
+            m.setAccessible(true);
+            m.invoke(service, "ELEC");
+        }).hasRootCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void removeTariffsForCountryNoTariffsDoesNotCallDeleteAll() throws Exception {
+        when(tariffRateRepository.findByOrigin(existingCountry)).thenReturn(List.of());
+        when(tariffRateRepository.findByDestination(existingCountry)).thenReturn(List.of());
+        var m = ReferenceService.class.getDeclaredMethod("removeTariffsForCountry", Country.class);
+        m.setAccessible(true);
+        m.invoke(service, existingCountry);
+        verify(tariffRateRepository, never()).deleteAll(any());
+    }
+
+    @Test
+    void updateCountryWithNoCodeKeepsOldCode() {
+        CountryUpdateRequest request = new CountryUpdateRequest();
+        request.code = null;
+        request.name = "Malaysia";
+        when(countryRepository.findByCode("SGP")).thenReturn(Optional.of(existingCountry));
+        when(countryRepository.save(any(Country.class))).thenAnswer(inv -> inv.getArgument(0));
+        Country updated = service.updateCountry("SGP", request);
+        assertThat(updated.getCode()).isEqualTo("SGP");
+        assertThat(updated.getName()).isEqualTo("Malaysia");
+    }
+
+    @Test
+    void updateCategoryWithNoCodeKeepsOldCode() {
+        ProductCategoryUpdateRequest request = new ProductCategoryUpdateRequest();
+        request.code = null;
+        request.name = "Consumer Electronics";
+        request.hsCode = "8517";
+        request.weightBased = Boolean.FALSE;
+        when(productCategoryRepository.findByCode("ELEC")).thenReturn(Optional.of(existingCategory));
+        when(productCategoryRepository.save(any(ProductCategory.class))).thenAnswer(inv -> inv.getArgument(0));
+        ProductCategory updated = service.updateCategory("ELEC", request);
+        assertThat(updated.getCode()).isEqualTo("ELEC");
+        assertThat(updated.getName()).isEqualTo("Consumer Electronics");
+    }
+
+    @Test
+    void deleteCategoryWithNoRelatedTariffsDoesNotCallDeleteAll() {
+        ProductCategory category = existingCategory;
+        when(productCategoryRepository.findByCode("ELEC")).thenReturn(Optional.of(category));
+        when(tariffRateRepository.findByProductCategory(category)).thenReturn(List.of());
+        service.deleteCategory("ELEC");
+        verify(tariffRateRepository, never()).deleteAll(any());
+        verify(productCategoryRepository).delete(category);
+    }
+
+    @Test
+    void createCategoryThrowsIfMissingHsCode() {
+        ProductCategoryCreateRequest request = new ProductCategoryCreateRequest();
+        request.code = "ELEC";
+        request.name = "Electronics";
+        request.hsCode = null;
+        request.weightBased = true;
+        assertThatThrownBy(() -> service.createCategory(request)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void createCategoryThrowsIfBlankHsCode() {
+        ProductCategoryCreateRequest request = new ProductCategoryCreateRequest();
+        request.code = "ELEC";
+        request.name = "Electronics";
+        request.hsCode = " ";
+        request.weightBased = true;
+        assertThatThrownBy(() -> service.createCategory(request)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void createCategoryThrowsIfDuplicateHsCode() {
+        ProductCategoryCreateRequest request = new ProductCategoryCreateRequest();
+        request.code = "ELEC";
+        request.name = "Electronics";
+        request.hsCode = "8517";
+        request.weightBased = true;
+        when(productCategoryRepository.findByCode("ELEC")).thenReturn(Optional.of(existingCategory));
+        assertThatThrownBy(() -> service.createCategory(request)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void updateCategoryThrowsIfMissingHsCode() {
+        ProductCategoryUpdateRequest request = new ProductCategoryUpdateRequest();
+        request.code = "ELEC";
+        request.name = "Electronics";
+        request.hsCode = null;
+        request.weightBased = true;
+        when(productCategoryRepository.findByCode("ELEC")).thenReturn(Optional.of(existingCategory));
+        assertThatThrownBy(() -> service.updateCategory("ELEC", request)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void updateCategoryThrowsIfBlankHsCode() {
+        ProductCategoryUpdateRequest request = new ProductCategoryUpdateRequest();
+        request.code = "ELEC";
+        request.name = "Electronics";
+        request.hsCode = " ";
+        request.weightBased = true;
+        when(productCategoryRepository.findByCode("ELEC")).thenReturn(Optional.of(existingCategory));
+        assertThatThrownBy(() -> service.updateCategory("ELEC", request)).isInstanceOf(IllegalArgumentException.class);
+    }
+    
+    @Test
+    void updateCategoryThrowsIfDuplicateCode() {
+        ProductCategoryUpdateRequest request = new ProductCategoryUpdateRequest();
+        request.code = "GADGETS";
+        request.name = "Electronics";
+        request.hsCode = "8517";
+        request.weightBased = true;
+        when(productCategoryRepository.findByCode("ELEC")).thenReturn(Optional.of(existingCategory));
+        when(productCategoryRepository.findByCode("GADGETS")).thenReturn(Optional.of(new ProductCategory("GADGETS", "Gadgets")));
+        assertThatThrownBy(() -> service.updateCategory("ELEC", request)).isInstanceOf(IllegalArgumentException.class);
+    }
 
     @Mock
     private CountryRepository countryRepository;

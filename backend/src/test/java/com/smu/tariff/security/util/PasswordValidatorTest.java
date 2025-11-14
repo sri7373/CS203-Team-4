@@ -5,6 +5,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 class PasswordValidatorTest {
+    @Test
+    void returnsFalseForShortPassword() {
+        assertThat(PasswordValidator.isValid("A1!a")).isFalse();
+    }
+
+    @Test
+    void returnsFalseForMissingDigit() {
+        assertThat(PasswordValidator.isValid("InvalidAA!"))
+            .isFalse();
+    }
+
+    @Test
+    void returnsFalseForMissingSpecialChar() {
+        assertThat(PasswordValidator.isValid("Valid1234")).isFalse();
+    }
+
+    @Test
+    void returnsFalseForMissingLowercase() {
+        assertThat(PasswordValidator.isValid("INVALID123!"))
+            .isFalse();
+    }
 
     @Test
     void returnsTrueForValidPassword() {

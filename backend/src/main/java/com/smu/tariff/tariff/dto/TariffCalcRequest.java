@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public class TariffCalcRequest {
+    // For test compatibility: requested effective date range
+    public java.time.LocalDate requestedEffectiveFrom;
+    public java.time.LocalDate requestedEffectiveTo;
     @NotBlank public String originCountryCode;
     @NotBlank public String destinationCountryCode;
     @NotBlank public String hsCode;

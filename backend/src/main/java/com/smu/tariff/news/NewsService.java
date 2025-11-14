@@ -96,30 +96,38 @@ public class NewsService {
      * @return NewsDataResponse with articles
      */
     public NewsDataResponse getCountryTradeNews(String countryCode, String productCategory, Integer limit) {
-        StringBuilder queryBuilder = new StringBuilder();
-        queryBuilder.append("(\"trade policy\" OR tariff OR \"customs duty\" OR \"import tax\" OR \"trade war\")");
-        
-        if (productCategory != null && !productCategory.isBlank()) {
-            String category = productCategory.toLowerCase().trim();
-            queryBuilder.append(" AND (")
-                       .append(category)
-                       .append(" OR \"").append(category).append(" sector\"")
-                       .append(" OR \"").append(category).append(" industry\"")
-                       .append(")");
+        if (countryCode == null || countryCode.isBlank()) {
+            // Return an empty response or handle as appropriate (here: empty NewsDataResponse)
+            NewsDataResponse emptyResponse = new NewsDataResponse();
+            emptyResponse.setTotalResults(0);
+            emptyResponse.setArticles(List.of());
+            return emptyResponse;
         }
-        
-        NewsDataRequest request = NewsDataRequest.builder()
-                .query(queryBuilder.toString())
-                .country(Arrays.asList(countryCode.toLowerCase()))
-                .category(Arrays.asList("business", "politics", "world"))
-                .language(Arrays.asList("en"))
-                .priorityDomain("top")
-                .removeDuplicate(true)
-                .image(true)
-                .size(limit != null ? Math.min(limit, 50) : 10)
-                .build();
 
-        return newsDataClient.getLatestNews(request);
+    StringBuilder queryBuilder = new StringBuilder();
+    queryBuilder.append("(\"trade policy\" OR tariff OR \"customs duty\" OR \"import tax\" OR \"trade war\")");
+
+    if (productCategory != null && !productCategory.isBlank()) {
+        String category = productCategory.toLowerCase().trim();
+        queryBuilder.append(" AND (")
+               .append(category)
+               .append(" OR \"").append(category).append(" sector\"")
+               .append(" OR \"").append(category).append(" industry\"")
+               .append(")");
+    }
+
+    NewsDataRequest request = NewsDataRequest.builder()
+        .query(queryBuilder.toString())
+        .country(Arrays.asList(countryCode.toLowerCase()))
+        .category(Arrays.asList("business", "politics", "world"))
+        .language(Arrays.asList("en"))
+        .priorityDomain("top")
+        .removeDuplicate(true)
+        .image(true)
+        .size(limit != null ? Math.min(limit, 50) : 10)
+        .build();
+
+    return newsDataClient.getLatestNews(request);
     }
     
     /**
