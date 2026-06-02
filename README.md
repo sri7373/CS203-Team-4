@@ -112,6 +112,7 @@ Our automated pipeline includes:
 Feature Branch -> PR -> Develop/Main -> Production
 ```
 
+
 ## Branch Strategy
 
 - `main` - Production-ready code (stable releases)
